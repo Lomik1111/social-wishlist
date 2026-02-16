@@ -9,7 +9,7 @@ class AutoFillRequest(BaseModel):
     url: str
 
 
-@router.post("/")
+@router.post("")
 async def autofill(data: AutoFillRequest):
     result = await fetch_metadata(data.url)
     return result

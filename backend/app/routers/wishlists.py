@@ -17,7 +17,7 @@ from app.dependencies import get_current_user
 router = APIRouter()
 
 
-@router.get("/", response_model=list[WishlistResponse])
+@router.get("", response_model=list[WishlistResponse])
 async def get_my_wishlists(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Wishlist)
@@ -42,7 +42,7 @@ async def get_my_wishlists(user: User = Depends(get_current_user), db: AsyncSess
     ]
 
 
-@router.post("/", response_model=WishlistResponse, status_code=201)
+@router.post("", response_model=WishlistResponse, status_code=201)
 async def create_wishlist(data: WishlistCreate, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     wishlist = Wishlist(user_id=user.id, **data.model_dump())
     db.add(wishlist)
