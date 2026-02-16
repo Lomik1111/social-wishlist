@@ -7,7 +7,7 @@ import { formatPrice } from "@/lib/utils";
 import type { Wishlist, ItemOwner, AutoFillResult } from "@/types";
 import {
   Plus, Share2, Gift, Loader2, Trash2, ExternalLink,
-  Link as LinkIcon, Wand2, X, Users, Check,
+  Link as LinkIcon, Wand2, ImageIcon,
 } from "lucide-react";
 
 export default function WishlistDetailPage() {
@@ -48,6 +48,7 @@ export default function WishlistDetailPage() {
 
   useEffect(() => {
     if (user && id) fetchWishlist();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, id]);
 
   const handleAutoFill = async () => {
@@ -111,10 +112,23 @@ export default function WishlistDetailPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  /* ── Loading state ── */
   if (authLoading || loading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+      <div className="relative min-h-[60vh] overflow-hidden">
+        <div className="dot-pattern absolute inset-0" />
+        <div className="relative grid grid-cols-1 gap-6 pt-16 md:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="card-premium overflow-hidden">
+              <div className="skeleton h-48 w-full rounded-none" />
+              <div className="space-y-3 p-5">
+                <div className="skeleton h-5 w-3/4 rounded-lg" />
+                <div className="skeleton h-4 w-1/3 rounded-lg" />
+                <div className="skeleton h-3 w-1/2 rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -122,74 +136,90 @@ export default function WishlistDetailPage() {
   if (!wishlist) return null;
 
   return (
-    <div>
-      {/* Header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="animate-fade-in relative">
+      {/* ── Decorative blobs ── */}
+      <div className="blob blob-purple -right-40 -top-40 opacity-20" />
+
+      {/* ── Header ── */}
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{wishlist.title}</h1>
-          {wishlist.description && <p className="mt-1 text-sm text-gray-500">{wishlist.description}</p>}
+          <h1 className="gradient-text text-3xl font-bold">{wishlist.title}</h1>
+          {wishlist.description && (
+            <p className="mt-2 max-w-lg text-gray-500">{wishlist.description}</p>
+          )}
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={copyLink}
-            className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-          >
-            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Share2 className="h-4 w-4" />}
+
+        <div className="flex shrink-0 gap-3">
+          <button onClick={copyLink} className="btn-secondary flex items-center gap-2">
+            <Share2 className="h-4 w-4" />
             {copied ? "Скопировано!" : "Поделиться"}
           </button>
           <button
-            onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700"
+            onClick={() => setShowAddForm((v) => !v)}
+            className="btn-primary flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
-            Добавить
+            Добавить подарок
           </button>
         </div>
       </div>
 
-      {/* Add Item Form */}
+      {/* ── Add Item Form ── */}
       {showAddForm && (
-        <div className="mb-6 rounded-2xl border border-indigo-100 bg-white p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Новый подарок</h3>
-            <button onClick={() => setShowAddForm(false)} className="text-gray-400 hover:text-gray-600">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+        <div className="animate-slide-up card-premium mb-8 p-6">
+          <h3 className="mb-5 text-lg font-semibold text-gray-900">Новый подарок</h3>
 
-          {/* Auto-fill */}
-          <div className="mb-4 flex gap-2">
-            <div className="relative flex-1">
-              <LinkIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                type="url"
-                value={itemUrl}
-                onChange={(e) => setItemUrl(e.target.value)}
-                placeholder="Вставьте ссылку на товар"
-                className="w-full rounded-lg border border-gray-200 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-              />
+          {/* Auto-fill section */}
+          <div>
+            <p className="mb-2 text-sm font-medium text-gray-500">Автозаполнение по ссылке</p>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <LinkIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="url"
+                  value={itemUrl}
+                  onChange={(e) => setItemUrl(e.target.value)}
+                  placeholder="https://example.com/product"
+                  className="input-premium w-full pl-10"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleAutoFill}
+                disabled={!itemUrl || autoFillLoading}
+                className="btn-primary flex items-center gap-1.5 px-4 py-2 text-sm"
+              >
+                {autoFillLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Wand2 className="h-4 w-4" />
+                )}
+                Заполнить
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={handleAutoFill}
-              disabled={!itemUrl || autoFillLoading}
-              className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700 transition hover:bg-amber-100 disabled:opacity-50"
-            >
-              {autoFillLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-              Заполнить
-            </button>
           </div>
 
+          {/* Divider */}
+          <div className="flex items-center gap-4 my-6">
+            <div className="border-t border-gray-200 flex-1" />
+            <span className="text-sm text-gray-400">или</span>
+            <div className="border-t border-gray-200 flex-1" />
+          </div>
+
+          {/* Manual fields */}
           <form onSubmit={handleAddItem}>
             <div className="mb-4 grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Название</label>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Название <span className="text-red-400">*</span>
+                </label>
                 <input
                   type="text"
                   value={itemName}
                   onChange={(e) => setItemName(e.target.value)}
                   required
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  placeholder="Что хотите получить?"
+                  className="input-premium w-full"
                 />
               </div>
               <div>
@@ -200,19 +230,33 @@ export default function WishlistDetailPage() {
                   onChange={(e) => setItemPrice(e.target.value)}
                   min="0"
                   step="0.01"
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  placeholder="0"
+                  className="input-premium w-full"
                 />
               </div>
             </div>
 
             <div className="mb-4">
               <label className="mb-1 block text-sm font-medium text-gray-700">URL картинки</label>
-              <input
-                type="url"
-                value={itemImageUrl}
-                onChange={(e) => setItemImageUrl(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-              />
+              <div className="flex items-center gap-3">
+                <input
+                  type="url"
+                  value={itemImageUrl}
+                  onChange={(e) => setItemImageUrl(e.target.value)}
+                  placeholder="https://example.com/image.jpg"
+                  className="input-premium w-full"
+                />
+                {itemImageUrl && (
+                  <img
+                    src={itemImageUrl}
+                    alt="Превью"
+                    className="h-20 w-20 shrink-0 rounded-xl object-cover ring-1 ring-gray-100"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                )}
+              </div>
             </div>
 
             <div className="mb-4">
@@ -221,123 +265,166 @@ export default function WishlistDetailPage() {
                 value={itemDescription}
                 onChange={(e) => setItemDescription(e.target.value)}
                 rows={2}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                placeholder="Размер, цвет, любые подробности..."
+                className="input-premium w-full resize-none"
               />
             </div>
 
-            <label className="mb-4 flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={isGroupGift}
-                onChange={(e) => setIsGroupGift(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              <span className="text-sm text-gray-700">Можно скинуться вместе</span>
+            {/* Group gift toggle */}
+            <label className="mb-5 flex cursor-pointer items-center gap-3">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={isGroupGift}
+                  onChange={(e) => setIsGroupGift(e.target.checked)}
+                  className="peer sr-only"
+                />
+                <div className="h-6 w-11 rounded-full bg-gray-200 transition peer-checked:bg-violet-500" />
+                <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
+              </div>
+              <span className="text-sm text-gray-700">Групповой подарок</span>
             </label>
 
             <button
               type="submit"
-              disabled={addingItem}
-              className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
+              disabled={addingItem || !itemName.trim()}
+              className="btn-primary flex items-center gap-2"
             >
               {addingItem && <Loader2 className="h-4 w-4 animate-spin" />}
-              Добавить подарок
+              Добавить
             </button>
           </form>
         </div>
       )}
 
-      {/* Items List */}
+      {/* ── Items Grid ── */}
       {items.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-gray-200 py-16">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50">
-            <Gift className="h-8 w-8 text-indigo-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-700">Вишлист пуст</h3>
-          <p className="text-sm text-gray-500">Добавьте первый подарок!</p>
+        /* Empty state */
+        <div className="dot-pattern relative flex flex-col items-center justify-center rounded-3xl py-20">
+          <svg
+            className="mb-6 h-24 w-24 text-violet-400"
+            viewBox="0 0 100 100"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="20" y="40" width="60" height="45" rx="4" />
+            <path d="M20 55h60" />
+            <path d="M50 40v45" />
+            <path d="M50 40c-5-15-25-15-20 0" />
+            <path d="M50 40c5-15 25-15 20 0" />
+            <circle cx="50" cy="30" r="3" fill="currentColor" />
+          </svg>
+          <h3 className="mb-2 text-xl font-semibold text-gray-700">Вишлист пуст</h3>
+          <p className="mb-6 text-gray-500">Добавьте первый подарок</p>
           <button
             onClick={() => setShowAddForm(true)}
-            className="rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+            className="btn-primary flex items-center gap-2"
           >
+            <Plus className="h-4 w-4" />
             Добавить подарок
           </button>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((item) => (
-            <div key={item.id} className="group relative rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md overflow-hidden">
-              {/* Image */}
-              {item.image_url && (
-                <div className="h-40 w-full overflow-hidden bg-gray-100">
-                  <img
-                    src={item.image_url}
-                    alt={item.name}
-                    className="h-full w-full object-cover"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                  />
-                </div>
-              )}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {items.map((item, idx) => {
+            const delayClass =
+              idx % 5 === 0
+                ? "delay-100"
+                : idx % 5 === 1
+                ? "delay-200"
+                : idx % 5 === 2
+                ? "delay-300"
+                : idx % 5 === 3
+                ? "delay-400"
+                : "delay-500";
 
-              <div className="p-4">
-                <div className="mb-2 flex items-start justify-between">
-                  <h3 className="font-semibold text-gray-900 line-clamp-2">{item.name}</h3>
+            return (
+              <div
+                key={item.id}
+                className={`card-premium animate-fade-in ${delayClass} group relative overflow-hidden`}
+              >
+                {/* Image area */}
+                <div className="relative h-48 w-full overflow-hidden">
+                  {item.image_url ? (
+                    <img
+                      src={item.image_url}
+                      alt={item.name}
+                      className="img-zoom h-full w-full rounded-t-[20px] object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center rounded-t-[20px] bg-gradient-to-br from-violet-100 to-purple-100">
+                      <Gift className="h-12 w-12 text-violet-300" />
+                    </div>
+                  )}
+
+                  {/* Delete button */}
                   <button
                     onClick={() => handleDeleteItem(item.id)}
-                    className="ml-2 shrink-0 rounded p-1 text-gray-300 opacity-0 transition hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+                    className="absolute right-3 top-3 rounded-full bg-white/80 p-2 opacity-0 backdrop-blur transition hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
 
-                {item.price && (
-                  <p className="mb-2 text-lg font-bold text-indigo-600">{formatPrice(item.price)}</p>
-                )}
+                {/* Content */}
+                <div className="p-5">
+                  <h3 className="mb-1 font-semibold text-lg text-gray-900 line-clamp-2">
+                    {item.name}
+                  </h3>
 
-                {/* Status badges */}
-                <div className="flex flex-wrap gap-1.5">
-                  {item.is_reserved && (
-                    <span className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                      Зарезервировано
-                    </span>
+                  {item.price && (
+                    <p className="gradient-text mb-2 text-lg font-bold">
+                      {formatPrice(item.price)}
+                    </p>
                   )}
-                  {item.is_group_gift && (
-                    <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-                      <Users className="h-3 w-3" />
-                      Совместный подарок
-                    </span>
+
+                  {/* Badges */}
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {item.is_reserved && (
+                      <span className="badge-green">Зарезервирован</span>
+                    )}
+                    {item.is_group_gift && (
+                      <span className="badge-purple">Групповой подарок</span>
+                    )}
+                  </div>
+
+                  {/* Group gift progress */}
+                  {item.is_group_gift && item.price && parseFloat(item.contribution_total) > 0 && (
+                    <div className="mb-3">
+                      <div className="mb-1 flex justify-between text-xs text-gray-500">
+                        <span>Собрано {formatPrice(item.contribution_total)}</span>
+                        <span>{Math.round(item.progress_percentage)}%</span>
+                      </div>
+                      <div className="progress-bar-animated">
+                        <div
+                          style={{ width: `${Math.min(item.progress_percentage, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* External link */}
+                  {item.url && (
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-violet-500 hover:text-violet-700 transition"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Перейти к товару
+                    </a>
                   )}
                 </div>
-
-                {/* Group gift progress */}
-                {item.is_group_gift && item.price && parseFloat(item.contribution_total) > 0 && (
-                  <div className="mt-3">
-                    <div className="mb-1 flex justify-between text-xs text-gray-500">
-                      <span>Собрано {formatPrice(item.contribution_total)}</span>
-                      <span>{Math.round(item.progress_percentage)}%</span>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-gray-100">
-                      <div
-                        className="h-full rounded-full bg-indigo-500 transition-all"
-                        style={{ width: `${Math.min(item.progress_percentage, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {item.url && (
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-3 flex items-center gap-1 text-xs text-indigo-500 hover:underline"
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                    Перейти к товару
-                  </a>
-                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

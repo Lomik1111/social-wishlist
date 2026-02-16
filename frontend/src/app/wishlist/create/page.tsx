@@ -5,12 +5,11 @@ import api from "@/lib/api";
 import { Loader2 } from "lucide-react";
 
 const occasions = [
-  { value: "", label: "Выберите повод" },
-  { value: "birthday", label: "День рождения" },
-  { value: "new_year", label: "Новый год" },
-  { value: "wedding", label: "Свадьба" },
-  { value: "christmas", label: "Рождество" },
-  { value: "other", label: "Другое" },
+  { value: "birthday", emoji: "🎂", label: "День рождения" },
+  { value: "new_year", emoji: "🎄", label: "Новый год" },
+  { value: "wedding", emoji: "💍", label: "Свадьба" },
+  { value: "christmas", emoji: "🎅", label: "Рождество" },
+  { value: "other", emoji: "🎁", label: "Другое" },
 ];
 
 export default function CreateWishlistPage() {
@@ -38,60 +37,83 @@ export default function CreateWishlistPage() {
   };
 
   return (
-    <div className="mx-auto max-w-lg">
-      <h1 className="mb-6 text-2xl font-bold">Новый вишлист</h1>
+    <div className="relative mx-auto max-w-lg">
+      {/* Background blob */}
+      <div className="blob blob-purple absolute -top-20 -right-20 -z-10 w-72 h-72 opacity-30" />
 
-      <form onSubmit={handleSubmit} className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-        <div className="mb-4">
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">Название</label>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold gradient-text">Новый вишлист</h1>
+        <p className="mt-2 text-sm text-gray-500">
+          Создайте список желаний для любого повода
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="card-premium p-8 space-y-6">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Название
+          </label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            className="input-premium w-full"
             placeholder="Мой день рождения 2026"
           />
         </div>
 
-        <div className="mb-4">
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">Описание</label>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Описание
+          </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            className="input-premium w-full"
             placeholder="Пожелания, предпочтения, размеры..."
           />
         </div>
 
-        <div className="mb-4">
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">Повод</label>
-          <select
-            value={occasion}
-            onChange={(e) => setOccasion(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-          >
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Повод
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {occasions.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <div
+                key={o.value}
+                onClick={() => setOccasion(occasion === o.value ? "" : o.value)}
+                className={`cursor-pointer rounded-xl p-4 text-center transition-all ${
+                  occasion === o.value
+                    ? "border-2 border-violet-500 bg-violet-50 ring-2 ring-violet-100"
+                    : "border-2 border-transparent bg-gray-50 hover:bg-gray-100"
+                }`}
+              >
+                <div className="text-2xl mb-1">{o.emoji}</div>
+                <div className="text-sm font-medium">{o.label}</div>
+              </div>
             ))}
-          </select>
+          </div>
         </div>
 
-        <div className="mb-6">
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">Дата события</label>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Дата события
+          </label>
           <input
             type="date"
             value={eventDate}
             onChange={(e) => setEventDate(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            className="input-premium w-full"
           />
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
+          className="btn-primary w-full flex items-center justify-center gap-2"
         >
           {loading && <Loader2 className="h-4 w-4 animate-spin" />}
           Создать вишлист

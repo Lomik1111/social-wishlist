@@ -17,7 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className={`${inter.className} min-h-screen bg-gray-50 text-gray-900 antialiased`}>
+      <body className={`${inter.className} min-h-screen bg-gradient-to-b from-slate-50 via-white to-purple-50/30 text-gray-900 antialiased`}>
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>

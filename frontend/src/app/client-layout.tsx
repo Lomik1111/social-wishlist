@@ -13,7 +13,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   return (
     <>
       <Header />
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 py-8 animate-fade-in">{children}</main>
     </>
   );
 }
