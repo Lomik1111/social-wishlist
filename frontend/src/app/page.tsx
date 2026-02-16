@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import {
   Gift,
   Link as LinkIcon,
@@ -10,43 +11,92 @@ import {
   Sparkle,
   ArrowRight,
 } from "@phosphor-icons/react";
+import AnimatedSection from "@/components/landing/AnimatedSection";
+import type { ComponentType } from "react";
 
-const features = [
+/* -------- Dynamic 3D scene imports (SSR disabled) -------- */
+
+const HeroGiftScene = dynamic(
+  () => import("@/components/three/HeroGiftScene"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center w-full h-full animate-float">
+        <Image
+          src="/illustrations/gift.svg"
+          alt="Подарок"
+          width={220}
+          height={220}
+          priority
+        />
+      </div>
+    ),
+  }
+);
+
+const FeatureShareScene = dynamic(
+  () => import("@/components/three/FeatureShareScene"),
+  { ssr: false }
+);
+
+const FeatureUsersScene = dynamic(
+  () => import("@/components/three/FeatureUsersScene"),
+  { ssr: false }
+);
+
+const FeatureConfettiScene = dynamic(
+  () => import("@/components/three/FeatureConfettiScene"),
+  { ssr: false }
+);
+
+/* -------- Data -------- */
+
+interface FeatureData {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  icon: ComponentType<any>;
+  title: string;
+  description: string;
+  iconColor: string;
+  iconBg: string;
+  ThreeScene: ComponentType | null;
+}
+
+const features: FeatureData[] = [
   {
     icon: Gift,
     title: "Создавайте списки",
     description:
       "Добавляйте подарки с фото, ценой и ссылкой. Автозаполнение подтянет всё за вас",
-    accent: "bg-[rgba(108,92,231,0.1)]",
     iconColor: "text-[var(--color-primary)]",
     iconBg: "bg-[rgba(108,92,231,0.12)]",
+    ThreeScene: null, // Gift already in hero as 3D
   },
   {
     icon: LinkIcon,
     title: "Делитесь одной ссылкой",
     description:
       "Без регистрации и скачивания. Друзья откроют ваш вишлист прямо в браузере",
-    accent: "bg-[rgba(253,121,168,0.1)]",
     iconColor: "text-[var(--color-accent-coral)]",
     iconBg: "bg-[rgba(253,121,168,0.12)]",
+    ThreeScene: FeatureShareScene,
   },
   {
     icon: UsersThree,
     title: "Скидывайтесь вместе",
     description:
       "Дорогой подарок? Друзья увидят прогресс-бар и смогут внести любую сумму",
-    accent: "bg-[rgba(0,184,148,0.1)]",
     iconColor: "text-[var(--color-success)]",
     iconBg: "bg-[rgba(0,184,148,0.12)]",
+    ThreeScene: FeatureUsersScene,
   },
   {
     icon: Confetti,
     title: "Сохраняйте сюрприз",
     description:
       "Владелец не видит кто и что зарезервировал. Сюрприз останется сюрпризом",
-    accent: "bg-[rgba(253,203,110,0.1)]",
     iconColor: "text-[var(--color-accent-gold)]",
     iconBg: "bg-[rgba(253,203,110,0.15)]",
+    ThreeScene: FeatureConfettiScene,
   },
 ];
 
@@ -80,88 +130,122 @@ export default function Home() {
 
         <div className="relative z-10 mx-auto max-w-4xl text-center">
           {/* Pill badge */}
-          <div className="animate-fade-in mb-6 flex justify-center">
-            <span className="badge-purple inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium">
-              <Sparkle size={16} weight="duotone" />
-              Новый способ дарить подарки
-            </span>
-          </div>
+          <AnimatedSection delay={0}>
+            <div className="mb-6 flex justify-center">
+              <span className="badge-purple inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium">
+                <Sparkle size={16} weight="duotone" />
+                Новый способ дарить подарки
+              </span>
+            </div>
+          </AnimatedSection>
 
           {/* Heading */}
-          <h1 className="animate-fade-in text-5xl font-extrabold tracking-tight md:text-7xl">
-            Создавайте вишлисты,
-            <br />
-            которые{" "}
-            <span className="gradient-text-hero">вдохновляют</span>
-          </h1>
+          <AnimatedSection delay={0.1}>
+            <h1 className="text-5xl font-extrabold tracking-tight md:text-7xl">
+              Создавайте вишлисты,
+              <br />
+              которые{" "}
+              <span className="gradient-text-hero">вдохновляют</span>
+            </h1>
+          </AnimatedSection>
 
           {/* Subtitle */}
-          <p className="animate-fade-in delay-100 mx-auto mt-6 max-w-2xl text-lg text-[var(--color-text-secondary)]">
-            Соберите все желания в одном месте, поделитесь ссылкой с друзьями
-            — и каждый подарок будет именно тем, о чём вы мечтали.
-          </p>
+          <AnimatedSection delay={0.2}>
+            <p className="mx-auto mt-6 max-w-2xl text-lg text-[var(--color-text-secondary)]">
+              Соберите все желания в одном месте, поделитесь ссылкой с друзьями
+              — и каждый подарок будет именно тем, о чём вы мечтали.
+            </p>
+          </AnimatedSection>
 
           {/* Buttons */}
-          <div className="animate-fade-in delay-200 mt-8 flex flex-wrap items-center justify-center gap-4">
-            <Link
-              href="/register"
-              className="btn-primary inline-flex items-center gap-2"
-            >
-              Создать вишлист
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <a href="#how-it-works" className="btn-secondary">
-              Как это работает
-            </a>
-          </div>
+          <AnimatedSection delay={0.3}>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+              <Link
+                href="/register"
+                className="btn-primary inline-flex items-center gap-2"
+              >
+                Создать вишлист
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <a href="#how-it-works" className="btn-secondary">
+                Как это работает
+              </a>
+            </div>
+          </AnimatedSection>
 
-          {/* Gift illustration */}
-          <div className="animate-float mx-auto mt-14 w-[220px]">
-            <Image
-              src="/illustrations/gift.svg"
-              alt="Подарок"
-              width={220}
-              height={220}
-              priority
-            />
-          </div>
+          {/* 3D Gift illustration */}
+          <AnimatedSection delay={0.4} direction="none">
+            <div className="mx-auto mt-14">
+              {/* Desktop: 3D WebGL scene */}
+              <div className="hidden md:block mx-auto w-[280px] h-[280px]">
+                <HeroGiftScene />
+              </div>
+              {/* Mobile: Static SVG with CSS float animation */}
+              <div className="block md:hidden mx-auto w-[200px] animate-float">
+                <Image
+                  src="/illustrations/gift.svg"
+                  alt="Подарок"
+                  width={200}
+                  height={200}
+                  priority
+                />
+              </div>
+            </div>
+          </AnimatedSection>
         </div>
       </section>
 
       {/* ============ FEATURES ============ */}
       <section className="mt-24 w-full">
-        <h2 className="text-center text-3xl font-bold text-[var(--color-text-primary)]">
-          Всё для идеального подарка
-        </h2>
+        <AnimatedSection>
+          <h2 className="text-center text-3xl font-bold text-[var(--color-text-primary)]">
+            Всё для идеального подарка
+          </h2>
+        </AnimatedSection>
 
         <div className="mx-auto mt-12 grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-2">
           {features.map((f, i) => {
             const Icon = f.icon;
+            const ThreeScene = f.ThreeScene;
             return (
-              <div
-                key={f.title}
-                className={`card-premium animate-fade-in p-8 ${
-                  i === 0
-                    ? "delay-100"
-                    : i === 1
-                      ? "delay-200"
-                      : i === 2
-                        ? "delay-300"
-                        : "delay-400"
-                }`}
-              >
-                <div
-                  className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${f.iconBg}`}
-                >
-                  <Icon size={26} weight="duotone" className={f.iconColor} />
+              <AnimatedSection key={f.title} delay={0.1 * i} direction="up">
+                <div className="card-premium p-8">
+                  <div
+                    className={`mb-4 flex items-center justify-center rounded-2xl ${f.iconBg} ${
+                      ThreeScene ? "h-20 w-20" : "h-12 w-12"
+                    }`}
+                  >
+                    {ThreeScene ? (
+                      <>
+                        {/* Desktop: 3D icon */}
+                        <div className="hidden md:block w-full h-full">
+                          <ThreeScene />
+                        </div>
+                        {/* Mobile: 2D Phosphor icon */}
+                        <div className="block md:hidden">
+                          <Icon
+                            size={26}
+                            weight="duotone"
+                            className={f.iconColor}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <Icon
+                        size={26}
+                        weight="duotone"
+                        className={f.iconColor}
+                      />
+                    )}
+                  </div>
+                  <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                    {f.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+                    {f.description}
+                  </p>
                 </div>
-                <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
-                  {f.title}
-                </h3>
-                <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-                  {f.description}
-                </p>
-              </div>
+              </AnimatedSection>
             );
           })}
         </div>
@@ -169,9 +253,11 @@ export default function Home() {
 
       {/* ============ HOW IT WORKS ============ */}
       <section id="how-it-works" className="mt-24 w-full">
-        <h2 className="text-center text-3xl font-bold text-[var(--color-text-primary)]">
-          Три простых шага
-        </h2>
+        <AnimatedSection>
+          <h2 className="text-center text-3xl font-bold text-[var(--color-text-primary)]">
+            Три простых шага
+          </h2>
+        </AnimatedSection>
 
         <div className="mx-auto mt-12 flex max-w-3xl flex-col items-start gap-0 md:flex-row md:items-start">
           {steps.map((s, i) => (
@@ -179,15 +265,7 @@ export default function Home() {
               key={s.num}
               className="flex flex-1 items-start gap-0 md:flex-col"
             >
-              <div
-                className={`animate-slide-up text-center ${
-                  i === 0
-                    ? "delay-100"
-                    : i === 1
-                      ? "delay-200"
-                      : "delay-300"
-                } flex w-full flex-col items-center`}
-              >
+              <AnimatedSection delay={0.15 * i} direction="up" className="flex w-full flex-col items-center text-center">
                 {/* Gradient numbered circle */}
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent-coral)] text-lg font-bold text-white shadow-lg">
                   {s.num}
@@ -198,7 +276,7 @@ export default function Home() {
                 <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
                   {s.description}
                 </p>
-              </div>
+              </AnimatedSection>
 
               {/* Dashed connector */}
               {i < steps.length - 1 && (
@@ -212,7 +290,7 @@ export default function Home() {
       </section>
 
       {/* ============ CTA BANNER ============ */}
-      <section className="mt-24 mb-12 w-full">
+      <AnimatedSection direction="up" className="mt-24 mb-12 w-full">
         <div className="noise-texture relative overflow-hidden rounded-3xl bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-primary-light)] to-[var(--color-accent-coral)] p-12 text-center text-white">
           {/* Decorative floating circles */}
           <div className="absolute left-10 top-10 h-16 w-16 rounded-full bg-white/10 animate-float" />
@@ -235,7 +313,7 @@ export default function Home() {
             </Link>
           </div>
         </div>
-      </section>
+      </AnimatedSection>
     </div>
   );
 }
