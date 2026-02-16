@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <defs>
+    <linearGradient id="nfGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6C5CE7" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#FD79A8" stop-opacity="0.04"/>
+    </linearGradient>
+    <linearGradient id="nfGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6C5CE7"/>
+      <stop offset="100%" stop-color="#A29BFE"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <ellipse cx="200" cy="155" rx="170" ry="125" fill="url(#nfGrad1)"/>
+  <!-- Broken link chain -->
+  <g transform="translate(200 140)">
+    <!-- Left link -->
+    <rect x="-70" y="-15" width="50" height="30" rx="15" fill="none" stroke="#A29BFE" stroke-width="4"/>
+    <!-- Right link (offset/broken) -->
+    <rect x="20" y="-10" width="50" height="30" rx="15" fill="none" stroke="#FD79A8" stroke-width="4" transform="rotate(8 45 5)"/>
+    <!-- Break marks -->
+    <line x1="-5" y1="-8" x2="5" y2="8" stroke="#636E72" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+    <line x1="5" y1="-8" x2="-5" y2="8" stroke="#636E72" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+  </g>
+  <!-- Question marks -->
+  <text x="100" y="100" font-family="system-ui" font-size="28" font-weight="700" fill="#A29BFE" opacity="0.3">?</text>
+  <text x="290" y="110" font-family="system-ui" font-size="22" font-weight="700" fill="#FD79A8" opacity="0.25">?</text>
+  <!-- Small decorative elements -->
+  <circle cx="80" cy="200" r="4" fill="#FDCB6E" opacity="0.4"/>
+  <circle cx="330" cy="180" r="3" fill="#6C5CE7" opacity="0.3"/>
+  <circle cx="120" cy="80" r="3" fill="#FD79A8" opacity="0.3"/>
+  <path d="M310 220 L313 212 L316 220 L324 223 L316 226 L313 234 L310 226 L302 223Z" fill="#A29BFE" opacity="0.3"/>
+</svg>

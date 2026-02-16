@@ -1,21 +1,23 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from uuid import UUID
 from datetime import datetime, date
 
 
 class WishlistCreate(BaseModel):
-    title: str
-    description: str | None = None
+    title: str = Field(max_length=200)
+    description: str | None = Field(default=None, max_length=1000)
     occasion: str | None = None
     event_date: date | None = None
+    theme: str = "purple"
 
 
 class WishlistUpdate(BaseModel):
-    title: str | None = None
-    description: str | None = None
+    title: str | None = Field(default=None, max_length=200)
+    description: str | None = Field(default=None, max_length=1000)
     occasion: str | None = None
     event_date: date | None = None
     is_active: bool | None = None
+    theme: str | None = None
 
 
 class WishlistResponse(BaseModel):
@@ -26,6 +28,7 @@ class WishlistResponse(BaseModel):
     event_date: date | None
     share_token: str
     is_active: bool
+    theme: str
     item_count: int = 0
     created_at: datetime
 

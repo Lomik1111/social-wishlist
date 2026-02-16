@@ -1,5 +1,7 @@
+import ipaddress
 import json
 import re
+import socket
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -29,12 +31,45 @@ _EMPTY_RESULT: dict = {
 
 
 # ---------------------------------------------------------------------------
+# SSRF protection
+# ---------------------------------------------------------------------------
+
+def is_private_ip(url: str) -> bool:
+    """Return True if the URL resolves to a private/reserved IP address."""
+    try:
+        hostname = urlparse(url).hostname
+        if not hostname:
+            return True
+        # Resolve hostname to IP addresses
+        addr_infos = socket.getaddrinfo(hostname, None)
+        for family, _, _, _, sockaddr in addr_infos:
+            ip = ipaddress.ip_address(sockaddr[0])
+            if (
+                ip.is_private
+                or ip.is_loopback
+                or ip.is_reserved
+                or ip.is_link_local
+                or ip.is_multicast
+                or ip.is_unspecified
+            ):
+                return True
+    except (socket.gaierror, ValueError, OSError):
+        return True
+    return False
+
+
+# ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
 
 async def fetch_metadata(url: str) -> dict:
     """Scrape a product page and return structured metadata."""
     result = dict(_EMPTY_RESULT)
+
+    # --- SSRF check ---
+    if is_private_ip(url):
+        result["error_message"] = "URL указывает на внутренний адрес"
+        return result
 
     # --- HTTP request ---
     try:

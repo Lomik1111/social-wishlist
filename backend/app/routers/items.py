@@ -1,5 +1,6 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
@@ -9,6 +10,10 @@ from app.models.item import Item
 from app.schemas.item import ItemCreate, ItemUpdate, ItemResponse
 from app.dependencies import get_current_user
 from app.services.websocket_manager import ws_manager
+
+
+class ReorderRequest(BaseModel):
+    item_ids: list[UUID]
 
 router = APIRouter()
 
@@ -109,3 +114,36 @@ async def delete_item(
     })
 
     return {"message": "Item deleted"}
+
+
+@router.put("/wishlists/{wishlist_id}/items/reorder")
+async def reorder_items(
+    wishlist_id: UUID,
+    data: ReorderRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Wishlist).where(Wishlist.id == wishlist_id, Wishlist.user_id == user.id))
+    wishlist = result.scalar_one_or_none()
+    if not wishlist:
+        raise HTTPException(status_code=404, detail="Wishlist not found")
+
+    items_result = await db.execute(
+        select(Item).where(Item.wishlist_id == wishlist_id, Item.is_deleted == False)
+    )
+    items_map = {item.id: item for item in items_result.scalars().all()}
+
+    for idx, item_id in enumerate(data.item_ids):
+        item = items_map.get(item_id)
+        if not item:
+            raise HTTPException(status_code=400, detail=f"Item {item_id} not found in this wishlist")
+        item.sort_order = idx
+
+    await db.flush()
+
+    await ws_manager.broadcast(str(wishlist_id), {
+        "type": "items_reordered",
+        "item_ids": [str(i) for i in data.item_ids],
+    })
+
+    return {"message": "Items reordered"}

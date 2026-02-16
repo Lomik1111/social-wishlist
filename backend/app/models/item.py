@@ -16,6 +16,7 @@ class Item(Base):
     url: Mapped[str | None] = mapped_column(String(2000))
     image_url: Mapped[str | None] = mapped_column(String(2000))
     price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+    priority: Mapped[str] = mapped_column(String(20), default="nice_to_have", nullable=False)
     is_group_gift: Mapped[bool] = mapped_column(Boolean, default=False)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
