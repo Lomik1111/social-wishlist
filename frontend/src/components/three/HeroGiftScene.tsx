@@ -2,11 +2,11 @@
 
 import { useRef, useState, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Box, Sphere, Torus, Octahedron } from "@react-three/drei";
+import { RoundedBox, Sphere, Torus, Octahedron } from "@react-three/drei";
 import type { Group } from "three";
 import SceneCanvas from "./SceneCanvas";
 
-/* ---------- sparkle orbit data ---------- */
+/* --------- Sparkle orbit data --------- */
 
 interface SparkleData {
   radius: number;
@@ -18,15 +18,15 @@ interface SparkleData {
 
 function generateSparkles(count: number): SparkleData[] {
   return Array.from({ length: count }, (_, i) => ({
-    radius: 1.8 + Math.random() * 0.6,
-    speed: 0.4 + Math.random() * 0.3,
+    radius: 2.0 + Math.random() * 0.5,
+    speed: 0.35 + Math.random() * 0.25,
     offset: (i / count) * Math.PI * 2,
-    yOffset: (Math.random() - 0.5) * 1.2,
-    scale: 0.06 + Math.random() * 0.06,
+    yOffset: (Math.random() - 0.5) * 1.4,
+    scale: 0.06 + Math.random() * 0.05,
   }));
 }
 
-/* ---------- Sparkle particle ---------- */
+/* --------- Sparkle particle --------- */
 
 function Sparkle({ data }: { data: SparkleData }) {
   const ref = useRef<Group>(null);
@@ -46,35 +46,46 @@ function Sparkle({ data }: { data: SparkleData }) {
       <Octahedron args={[data.scale, 0]}>
         <meshStandardMaterial
           color="#FDCB6E"
-          metalness={0.6}
+          metalness={0.7}
           roughness={0.1}
           emissive="#FDCB6E"
-          emissiveIntensity={0.15}
+          emissiveIntensity={0.2}
         />
       </Octahedron>
     </group>
   );
 }
 
-/* ---------- Gift Box group ---------- */
+/* --------- Gift Box --------- */
+
+const BOX_W = 1.8;
+const BOX_H = 1.3;
+const BOX_D = 1.8;
+const LID_H = 0.25;
+const LID_OVERHANG = 0.08;
+const RIBBON_W = 0.22;
 
 function GiftBox() {
   const groupRef = useRef<Group>(null);
   const lidRef = useRef<Group>(null);
   const [hovered, setHovered] = useState(false);
-  const sparkles = useMemo(() => generateSparkles(7), []);
+  const sparkles = useMemo(() => generateSparkles(6), []);
 
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
     const speed = hovered ? 0.005 : 0.003;
     groupRef.current.rotation.y += speed;
 
-    // Lid breathing
+    // Lid gentle breathing
     if (lidRef.current) {
       lidRef.current.position.y =
-        0.9 + Math.sin(clock.elapsedTime * 1.5) * 0.04;
+        BOX_H / 2 + LID_H / 2 + 0.01 + Math.sin(clock.elapsedTime * 1.5) * 0.035;
     }
   });
+
+  const boxTop = BOX_H / 2; // top surface of box body
+  const lidY = boxTop + LID_H / 2 + 0.01; // lid rests just above body
+  const bowY = lidY + LID_H / 2 + 0.1; // bow sits on top of lid
 
   return (
     <group
@@ -82,82 +93,133 @@ function GiftBox() {
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
     >
-      {/* --- Box body --- */}
-      <Box args={[2, 1.5, 2]} position={[0, 0, 0]}>
+      {/* ---- Box body ---- */}
+      <RoundedBox args={[BOX_W, BOX_H, BOX_D]} radius={0.06} smoothness={4}>
         <meshStandardMaterial
-          color="#6C5CE7"
-          metalness={0.15}
-          roughness={0.3}
-          emissive="#6C5CE7"
-          emissiveIntensity={0.05}
+          color="#8B5CF6"
+          metalness={0.08}
+          roughness={0.45}
+          emissive="#7C3AED"
+          emissiveIntensity={0.06}
         />
-      </Box>
+      </RoundedBox>
 
-      {/* --- Lid --- */}
-      <group ref={lidRef} position={[0, 0.9, 0]}>
-        <Box args={[2.2, 0.3, 2.2]}>
+      {/* ---- Lid ---- */}
+      <group ref={lidRef} position={[0, lidY, 0]}>
+        <RoundedBox
+          args={[BOX_W + LID_OVERHANG * 2, LID_H, BOX_D + LID_OVERHANG * 2]}
+          radius={0.05}
+          smoothness={4}
+        >
           <meshStandardMaterial
-            color="#7C6CF0"
-            metalness={0.15}
-            roughness={0.3}
+            color="#A78BFA"
+            metalness={0.08}
+            roughness={0.4}
           />
-        </Box>
+        </RoundedBox>
+
+        {/* Ribbon on lid — horizontal strip (X direction) */}
+        <RoundedBox
+          args={[BOX_W + LID_OVERHANG * 2 + 0.01, LID_H + 0.02, RIBBON_W]}
+          radius={0.02}
+          smoothness={2}
+        >
+          <meshStandardMaterial
+            color="#FB7185"
+            metalness={0.25}
+            roughness={0.2}
+          />
+        </RoundedBox>
+
+        {/* Ribbon on lid — horizontal strip (Z direction) */}
+        <RoundedBox
+          args={[RIBBON_W, LID_H + 0.02, BOX_D + LID_OVERHANG * 2 + 0.01]}
+          radius={0.02}
+          smoothness={2}
+        >
+          <meshStandardMaterial
+            color="#FB7185"
+            metalness={0.25}
+            roughness={0.2}
+          />
+        </RoundedBox>
       </group>
 
-      {/* --- Vertical ribbon (X axis) --- */}
-      <Box args={[0.25, 2.1, 2.1]} position={[0, 0.15, 0]}>
-        <meshStandardMaterial
-          color="#FD79A8"
-          metalness={0.3}
-          roughness={0.2}
-        />
-      </Box>
-
-      {/* --- Horizontal ribbon (Z axis) --- */}
-      <Box args={[2.1, 0.25, 0.25]} position={[0, 0.15, 0]}>
-        <meshStandardMaterial
-          color="#FD79A8"
-          metalness={0.3}
-          roughness={0.2}
-        />
-      </Box>
-
-      {/* --- Bow left loop --- */}
-      <Torus
-        args={[0.35, 0.1, 16, 32]}
-        position={[-0.3, 1.35, 0]}
-        rotation={[0.3, 0, -0.5]}
+      {/* ---- Ribbon on box body — vertical strip (front, X direction) ---- */}
+      <RoundedBox
+        args={[BOX_W + 0.01, BOX_H + 0.01, RIBBON_W]}
+        radius={0.02}
+        smoothness={2}
       >
         <meshStandardMaterial
-          color="#FD79A8"
-          metalness={0.4}
+          color="#FB7185"
+          metalness={0.25}
+          roughness={0.2}
+        />
+      </RoundedBox>
+
+      {/* ---- Ribbon on box body — vertical strip (side, Z direction) ---- */}
+      <RoundedBox
+        args={[RIBBON_W, BOX_H + 0.01, BOX_D + 0.01]}
+        radius={0.02}
+        smoothness={2}
+      >
+        <meshStandardMaterial
+          color="#FB7185"
+          metalness={0.25}
+          roughness={0.2}
+        />
+      </RoundedBox>
+
+      {/* ---- Bow — left loop ---- */}
+      <Torus
+        args={[0.28, 0.08, 16, 32]}
+        position={[-0.25, bowY, 0]}
+        rotation={[Math.PI / 2, 0.6, 0]}
+      >
+        <meshStandardMaterial
+          color="#FB7185"
+          metalness={0.35}
           roughness={0.15}
         />
       </Torus>
 
-      {/* --- Bow right loop --- */}
+      {/* ---- Bow — right loop ---- */}
       <Torus
-        args={[0.35, 0.1, 16, 32]}
-        position={[0.3, 1.35, 0]}
-        rotation={[0.3, 0, 0.5]}
+        args={[0.28, 0.08, 16, 32]}
+        position={[0.25, bowY, 0]}
+        rotation={[Math.PI / 2, -0.6, 0]}
       >
         <meshStandardMaterial
-          color="#FD79A8"
-          metalness={0.4}
+          color="#FB7185"
+          metalness={0.35}
           roughness={0.15}
         />
       </Torus>
 
-      {/* --- Bow knot --- */}
-      <Sphere args={[0.15, 16, 16]} position={[0, 1.35, 0]}>
+      {/* ---- Bow — front loop ---- */}
+      <Torus
+        args={[0.22, 0.07, 16, 32]}
+        position={[0, bowY - 0.02, 0.2]}
+        rotation={[0.3, 0, 0]}
+      >
         <meshStandardMaterial
-          color="#E84393"
+          color="#F472B6"
+          metalness={0.35}
+          roughness={0.15}
+        />
+      </Torus>
+
+      {/* ---- Bow — knot center ---- */}
+      <Sphere args={[0.12, 16, 16]} position={[0, bowY, 0]}>
+        <meshStandardMaterial
+          color="#E11D48"
           metalness={0.2}
           roughness={0.3}
         />
       </Sphere>
 
-      {/* --- Orbiting sparkles --- */}
+      {/* ---- Orbiting sparkles ---- */}
       {sparkles.map((s, i) => (
         <Sparkle key={i} data={s} />
       ))}
@@ -165,11 +227,11 @@ function GiftBox() {
   );
 }
 
-/* ---------- Exported scene ---------- */
+/* --------- Exported scene --------- */
 
 export default function HeroGiftScene() {
   return (
-    <SceneCanvas className="w-full h-full" cameraPosition={[0, 0.5, 6]} cameraFov={40}>
+    <SceneCanvas className="w-full h-full" cameraPosition={[0, 1, 5.5]} cameraFov={42}>
       <GiftBox />
     </SceneCanvas>
   );
