@@ -608,3 +608,19 @@ html { scroll-behavior: smooth; }
     border-radius: var(--radius-lg);
   }
 }
+
+/* ===== 3D CANVAS CONTAINERS ===== */
+
+.three-canvas-container canvas {
+  background: transparent !important;
+}
+
+.three-canvas-container {
+  touch-action: none;
+}
+
+@media (max-width: 640px) {
+  .three-canvas-container {
+    pointer-events: none;
+  }
+}
