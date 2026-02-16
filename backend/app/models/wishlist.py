@@ -16,6 +16,7 @@ class Wishlist(Base):
     occasion: Mapped[str | None] = mapped_column(String(100))
     event_date: Mapped[date | None] = mapped_column(Date)
     share_token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True, default=lambda: secrets.token_urlsafe(32))
+    theme: Mapped[str] = mapped_column(String(30), default="purple", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

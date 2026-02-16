@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" fill="none">
+  <defs>
+    <linearGradient id="giftGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6C5CE7"/>
+      <stop offset="100%" stop-color="#A29BFE"/>
+    </linearGradient>
+    <linearGradient id="giftGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FD79A8"/>
+      <stop offset="100%" stop-color="#FDCB6E"/>
+    </linearGradient>
+    <linearGradient id="giftGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E8DAFF"/>
+      <stop offset="100%" stop-color="#F3F0FF"/>
+    </linearGradient>
+    <filter id="giftShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#6C5CE7" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="250" cy="250" r="200" fill="url(#giftGrad3)" opacity="0.5"/>
+  <!-- Gift box body -->
+  <rect x="130" y="250" width="240" height="160" rx="16" fill="url(#giftGrad1)" filter="url(#giftShadow)"/>
+  <!-- Box lid -->
+  <rect x="115" y="215" width="270" height="50" rx="12" fill="#7C6CF0"/>
+  <!-- Lid highlight -->
+  <rect x="125" y="220" width="250" height="12" rx="6" fill="#8B7CF5" opacity="0.5"/>
+  <!-- Vertical ribbon -->
+  <rect x="230" y="215" width="40" height="195" rx="4" fill="url(#giftGrad2)"/>
+  <!-- Horizontal ribbon -->
+  <rect x="115" y="228" width="270" height="24" rx="4" fill="url(#giftGrad2)"/>
+  <!-- Bow left -->
+  <ellipse cx="220" cy="200" rx="40" ry="28" fill="#FD79A8" transform="rotate(-15 220 200)"/>
+  <!-- Bow right -->
+  <ellipse cx="280" cy="200" rx="40" ry="28" fill="#FD79A8" transform="rotate(15 280 200)"/>
+  <!-- Bow center knot -->
+  <circle cx="250" cy="208" r="16" fill="#E84393"/>
+  <!-- Sparkles -->
+  <g fill="#FDCB6E" opacity="0.9">
+    <path d="M90 160 L95 145 L100 160 L115 165 L100 170 L95 185 L90 170 L75 165Z"/>
+    <path d="M380 130 L384 118 L388 130 L400 134 L388 138 L384 150 L380 138 L368 134Z" transform="scale(0.8) translate(50, 20)"/>
+    <path d="M410 280 L413 272 L416 280 L424 283 L416 286 L413 294 L410 286 L402 283Z"/>
+  </g>
+  <!-- Stars -->
+  <circle cx="100" cy="300" r="4" fill="#A29BFE" opacity="0.6"/>
+  <circle cx="400" cy="200" r="3" fill="#FD79A8" opacity="0.5"/>
+  <circle cx="370" cy="350" r="5" fill="#FDCB6E" opacity="0.4"/>
+  <circle cx="150" cy="140" r="3" fill="#6C5CE7" opacity="0.5"/>
+</svg>

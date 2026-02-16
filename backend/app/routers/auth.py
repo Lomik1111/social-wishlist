@@ -5,7 +5,7 @@ from sqlalchemy import select
 from app.database import get_db
 from app.models.user import User
 from app.models.refresh_token import RefreshToken
-from app.schemas.user import UserRegister, UserLogin, TokenResponse, UserResponse, RefreshRequest
+from app.schemas.user import UserRegister, UserLogin, UserUpdate, TokenResponse, UserResponse, RefreshRequest
 from app.utils.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token, hash_token
 from app.dependencies import get_current_user
 from app.config import get_settings
@@ -101,4 +101,16 @@ async def logout(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
 
 @router.get("/me", response_model=UserResponse)
 async def me(user: User = Depends(get_current_user)):
+    return UserResponse.model_validate(user)
+
+
+@router.put("/me", response_model=UserResponse)
+async def update_me(
+    data: UserUpdate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    for key, value in data.model_dump(exclude_unset=True).items():
+        setattr(user, key, value)
+    await db.flush()
     return UserResponse.model_validate(user)

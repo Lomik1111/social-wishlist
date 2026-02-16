@@ -1,16 +1,23 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+
 import api from "@/lib/api";
 import { createWishlistSocket, type WSMessage } from "@/lib/websocket";
-import { formatPrice, formatDate } from "@/lib/utils";
+import { formatPrice, formatDate, pluralize, countdownText, countdownUrgency } from "@/lib/utils";
+import { useConfetti } from "@/components/animations/Confetti";
+import EmptyState from "@/components/ui/EmptyState";
+import { toast } from "sonner";
 import type { WishlistPublic, ItemPublic } from "@/types";
 import {
-  Gift, Lock, User, Calendar, ExternalLink,
-  CheckCircle, Heart, Loader2, X, ArrowLeft,
-} from "lucide-react";
+  Gift, Lock, User, Calendar, ArrowSquareOut,
+  CheckCircle, Heart, SpinnerGap, X, ArrowLeft,
+  Funnel, Users,
+} from "@phosphor-icons/react";
+
+type FilterType = "all" | "available" | "reserved" | "group";
 
 export default function PublicWishlistPage() {
   const { shareToken } = useParams<{ shareToken: string }>();
@@ -18,6 +25,10 @@ export default function PublicWishlistPage() {
   const [items, setItems] = useState<ItemPublic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [filter, setFilter] = useState<FilterType>("all");
+
+  // Per-item submitting state
+  const [submitting, setSubmitting] = useState<Record<string, boolean>>({});
 
   // Guest state
   const [guestName, setGuestName] = useState("");
@@ -36,7 +47,34 @@ export default function PublicWishlistPage() {
   const [contribItemId, setContribItemId] = useState("");
   const [contribAmount, setContribAmount] = useState("");
   const [contribMessage, setContribMessage] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+
+  // Image error tracking
+  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+
+  const fireConfetti = useConfetti();
+  const prevProgressRef = useRef<Record<string, number>>({});
+
+  // --- Helpers ---
+  const setItemSubmitting = (itemId: string, value: boolean) => {
+    setSubmitting((prev) => ({ ...prev, [itemId]: value }));
+  };
+
+  // --- Filter logic ---
+  const filteredItems = items.filter((item) => {
+    if (filter === "available") return !item.is_reserved && !item.is_group_gift;
+    if (filter === "reserved") return item.is_reserved;
+    if (filter === "group") return item.is_group_gift;
+    return true;
+  });
+
+  // --- Stats ---
+  const totalItems = items.length;
+  const reservedCount = items.filter((i) => i.is_reserved).length;
+  const contributorCount = items.reduce((sum, i) => sum + i.contribution_count, 0);
+
+  // --- Countdown ---
+  const countdown = countdownText(wishlist?.event_date);
+  const urgency = countdownUrgency(wishlist?.event_date);
 
   // Initialize guest identity
   useEffect(() => {
@@ -55,7 +93,7 @@ export default function PublicWishlistPage() {
       const stored = localStorage.getItem("reserved_items");
       if (stored) setReservedByMe(JSON.parse(stored));
     } catch {
-      // ignore
+      // ignore corrupt data
     }
   }, []);
 
@@ -64,6 +102,21 @@ export default function PublicWishlistPage() {
     localStorage.setItem("reserved_items", JSON.stringify(reservedByMe));
   }, [reservedByMe]);
 
+  // Track progress for confetti on 100%
+  useEffect(() => {
+    items.forEach((item) => {
+      if (item.is_group_gift) {
+        const prevProgress = prevProgressRef.current[item.id] ?? 0;
+        const curProgress = item.progress_percentage ?? 0;
+        if (prevProgress < 100 && curProgress >= 100) {
+          fireConfetti();
+          toast.success("Подарок полностью собран!");
+        }
+        prevProgressRef.current[item.id] = curProgress;
+      }
+    });
+  }, [items, fireConfetti]);
+
   const fetchWishlist = useCallback(async () => {
     try {
       const res = await api.get(`/wishlists/public/${shareToken}`);
@@ -71,6 +124,7 @@ export default function PublicWishlistPage() {
       setItems(res.data.items);
     } catch {
       setError(true);
+      toast.error("Не удалось загрузить вишлист");
     } finally {
       setLoading(false);
     }
@@ -131,7 +185,7 @@ export default function PublicWishlistPage() {
     return () => socket.close();
   }, [wishlist, fetchWishlist]);
 
-  // Guest name flow
+  // --- Guest name flow ---
   const ensureGuestName = (action: {
     type: "reserve" | "contribute";
     itemId: string;
@@ -159,9 +213,9 @@ export default function PublicWishlistPage() {
     }
   };
 
-  // Reserve
+  // --- Reserve ---
   const doReserve = async (itemId: string) => {
-    setSubmitting(true);
+    setItemSubmitting(itemId, true);
     try {
       const res = await api.post(`/items/${itemId}/reserve`, {
         guest_name: guestName,
@@ -174,10 +228,12 @@ export default function PublicWishlistPage() {
           i.id === itemId ? { ...i, is_reserved: true } : i
         )
       );
+      toast.success("Подарок зарезервирован!");
+      fireConfetti();
     } catch {
-      // already reserved
+      toast.error("Не удалось зарезервировать. Возможно, кто-то уже успел.");
     } finally {
-      setSubmitting(false);
+      setItemSubmitting(itemId, false);
     }
   };
 
@@ -187,11 +243,11 @@ export default function PublicWishlistPage() {
     }
   };
 
-  // Unreserve
+  // --- Unreserve ---
   const handleUnreserve = async (itemId: string) => {
     const reservationId = reservedByMe[itemId];
     if (!reservationId) return;
-    setSubmitting(true);
+    setItemSubmitting(itemId, true);
     try {
       await api.delete(`/reservations/${reservationId}`, {
         data: { guest_identifier: guestId },
@@ -206,14 +262,15 @@ export default function PublicWishlistPage() {
           i.id === itemId ? { ...i, is_reserved: false } : i
         )
       );
+      toast("Бронирование снято");
     } catch {
-      // silent
+      toast.error("Не удалось отменить бронирование");
     } finally {
-      setSubmitting(false);
+      setItemSubmitting(itemId, false);
     }
   };
 
-  // Contribute
+  // --- Contribute ---
   const handleContributeClick = (itemId: string) => {
     if (ensureGuestName({ type: "contribute", itemId })) {
       setContribItemId(itemId);
@@ -223,26 +280,6 @@ export default function PublicWishlistPage() {
     }
   };
 
-  const handleContribute = async () => {
-    if (!contribAmount || parseFloat(contribAmount) <= 0) return;
-    setSubmitting(true);
-    try {
-      await api.post(`/items/${contribItemId}/contribute`, {
-        amount: parseFloat(contribAmount),
-        message: contribMessage || null,
-        guest_name: guestName,
-        guest_identifier: guestId,
-      });
-      setShowContributeModal(false);
-      fetchWishlist();
-    } catch {
-      // silent
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Get the item currently being contributed to
   const contribItem = items.find((i) => i.id === contribItemId);
   const contribRemaining =
     contribItem?.price
@@ -252,6 +289,38 @@ export default function PublicWishlistPage() {
           0
         )
       : 0;
+
+  const handleContribute = async () => {
+    if (!contribAmount || parseFloat(contribAmount) <= 0) return;
+
+    // Cap amount at remaining price
+    let amount = parseFloat(contribAmount);
+    if (contribRemaining > 0 && amount > contribRemaining) {
+      amount = contribRemaining;
+    }
+
+    setItemSubmitting(contribItemId, true);
+    try {
+      await api.post(`/items/${contribItemId}/contribute`, {
+        amount,
+        message: contribMessage || null,
+        guest_name: guestName,
+        guest_identifier: guestId,
+      });
+      setShowContributeModal(false);
+      toast.success(`Вклад ${formatPrice(amount)} внесён!`);
+      fetchWishlist();
+    } catch {
+      toast.error("Не удалось внести вклад. Попробуйте ещё раз.");
+    } finally {
+      setItemSubmitting(contribItemId, false);
+    }
+  };
+
+  const contribExceedsRemaining =
+    contribRemaining > 0 &&
+    !!contribAmount &&
+    parseFloat(contribAmount) > contribRemaining;
 
   // --- LOADING STATE ---
   if (loading) {
@@ -285,32 +354,40 @@ export default function PublicWishlistPage() {
   // --- ERROR / NOT FOUND ---
   if (error || !wishlist) {
     return (
-      <div className="dot-pattern flex min-h-screen flex-col items-center justify-center gap-4 px-4">
-        <div className="text-center animate-fade-in">
-          <div className="mb-4 text-6xl">😔</div>
-          <h2 className="mb-2 text-2xl font-bold text-gray-800">
-            Вишлист не найден
-          </h2>
-          <p className="mb-6 text-sm text-gray-500">
-            Возможно, ссылка устарела или список был удалён
-          </p>
-          <Link
-            href="/"
-            className="btn-primary inline-flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            На главную
-          </Link>
+      <div className="flex min-h-screen flex-col items-center justify-center px-4">
+        <div className="w-full max-w-md animate-fade-in">
+          <EmptyState
+            illustration="/illustrations/not-found.svg"
+            title="Вишлист не найден"
+            description="Возможно, ссылка устарела или список был удалён"
+            action={
+              <Link
+                href="/"
+                className="btn-primary inline-flex items-center gap-2"
+              >
+                <ArrowLeft size={18} weight="duotone" />
+                На главную
+              </Link>
+            }
+          />
         </div>
       </div>
     );
   }
 
+  // --- Filter chips data ---
+  const filters: { key: FilterType; label: string }[] = [
+    { key: "all", label: "Все" },
+    { key: "available", label: "Доступные" },
+    { key: "reserved", label: "Зарезервированные" },
+    { key: "group", label: "Групповые" },
+  ];
+
   return (
     <div className="min-h-screen px-4 py-8">
       <div className="mx-auto max-w-6xl">
         {/* ===== HEADER ===== */}
-        <div className="relative mb-10 overflow-hidden rounded-3xl bg-white/60 px-6 py-10 text-center backdrop-blur-sm">
+        <div className="glass noise-texture relative mb-10 overflow-hidden rounded-3xl px-6 py-10 text-center">
           {/* Background blobs */}
           <div className="blob blob-purple absolute -left-20 -top-20 h-64 w-64 opacity-20" />
           <div className="blob blob-pink absolute -bottom-16 -right-16 h-56 w-56 opacity-20" />
@@ -318,8 +395,9 @@ export default function PublicWishlistPage() {
           <div className="relative z-10">
             {/* Gift icon */}
             <div className="mb-5 flex justify-center">
-              <div className="animate-float rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 p-3 shadow-lg shadow-violet-500/25">
-                <Gift className="h-8 w-8 text-white" />
+              <div className="animate-float rounded-2xl p-3 shadow-lg"
+                style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-accent-coral))" }}>
+                <Gift size={32} weight="duotone" className="text-white" />
               </div>
             </div>
 
@@ -331,7 +409,7 @@ export default function PublicWishlistPage() {
             {/* Owner */}
             {wishlist.owner_name && (
               <p className="mb-3 flex items-center justify-center gap-1.5 text-gray-500">
-                <User className="h-4 w-4" />
+                <User size={16} weight="duotone" />
                 {wishlist.owner_name}
               </p>
             )}
@@ -345,15 +423,35 @@ export default function PublicWishlistPage() {
 
             {/* Event date */}
             {wishlist.event_date && (
-              <p className="mb-4 flex items-center justify-center gap-1.5 text-sm text-gray-400">
-                <Calendar className="h-4 w-4" />
+              <p className="mb-3 flex items-center justify-center gap-1.5 text-sm text-gray-400">
+                <Calendar size={16} weight="duotone" />
                 {formatDate(wishlist.event_date)}
               </p>
             )}
 
+            {/* Countdown badge */}
+            {countdown && (
+              <div className="mb-4 flex justify-center">
+                <span
+                  className={`countdown-badge ${
+                    urgency === "urgent"
+                      ? "badge-coral"
+                      : urgency === "soon"
+                        ? "badge-gold"
+                        : urgency === "past"
+                          ? "badge-gray"
+                          : "badge-primary"
+                  }`}
+                >
+                  <Calendar size={14} weight="duotone" />
+                  {countdown}
+                </span>
+              </div>
+            )}
+
             {/* Privacy notice */}
             <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/60 px-4 py-2 backdrop-blur-sm">
-              <Lock className="h-3.5 w-3.5 text-gray-400" />
+              <Lock size={14} weight="duotone" className="text-gray-400" />
               <span className="text-xs text-gray-500">
                 Владелец не видит кто резервирует
               </span>
@@ -361,19 +459,76 @@ export default function PublicWishlistPage() {
           </div>
         </div>
 
+        {/* ===== STATS BAR ===== */}
+        {totalItems > 0 && (
+          <div className="mb-6 flex flex-wrap items-center justify-center gap-3 text-sm text-gray-500">
+            <span className="inline-flex items-center gap-1.5">
+              <Gift size={16} weight="duotone" style={{ color: "var(--color-primary)" }} />
+              <strong>{totalItems}</strong>{" "}
+              {pluralize(totalItems, "подарок", "подарка", "подарков")}
+            </span>
+            <span className="text-gray-300">|</span>
+            <span className="inline-flex items-center gap-1.5">
+              <CheckCircle size={16} weight="duotone" style={{ color: "var(--color-success)" }} />
+              <strong>{reservedCount}</strong>{" "}
+              {pluralize(reservedCount, "зарезервирован", "зарезервировано", "зарезервировано")}
+            </span>
+            {contributorCount > 0 && (
+              <>
+                <span className="text-gray-300">|</span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Users size={16} weight="duotone" style={{ color: "var(--color-accent-coral)" }} />
+                  <strong>{contributorCount}</strong>{" "}
+                  {pluralize(contributorCount, "участник", "участника", "участников")}
+                </span>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ===== FILTER CHIPS ===== */}
+        {totalItems > 0 && (
+          <div className="mb-8 flex flex-wrap items-center justify-center gap-2">
+            <Funnel size={18} weight="duotone" className="text-gray-400 mr-1" />
+            {filters.map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                className={`filter-chip ${filter === f.key ? "active" : ""}`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* ===== ITEMS GRID ===== */}
         {items.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 py-20 animate-fade-in">
-            <Gift className="h-14 w-14 text-gray-300" />
-            <p className="text-gray-500">В этом вишлисте пока нет подарков</p>
+          <EmptyState
+            illustration="/illustrations/empty-wishlist.svg"
+            title="В этом вишлисте пока нет подарков"
+            description="Загляните позже -- возможно, хозяин ещё добавит идеи"
+          />
+        ) : filteredItems.length === 0 ? (
+          <div className="py-16 text-center animate-fade-in">
+            <Funnel size={48} weight="duotone" className="mx-auto mb-3 text-gray-300" />
+            <p className="text-gray-500">Нет подарков в этой категории</p>
+            <button
+              onClick={() => setFilter("all")}
+              className="btn-secondary mt-4 text-sm"
+            >
+              Показать все
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {items.map((item, index) => {
+            {filteredItems.map((item, index) => {
               const isReservedByMe = !!reservedByMe[item.id];
+              const isSubmitting = !!submitting[item.id];
               const progress = item.progress_percentage ?? 0;
               const collected = parseFloat(item.contribution_total || "0");
               const price = item.price ? parseFloat(item.price) : 0;
+              const hasImageError = !!imgErrors[item.id];
               const delayClass =
                 index % 5 === 0
                   ? "delay-100"
@@ -390,26 +545,36 @@ export default function PublicWishlistPage() {
                   key={item.id}
                   className={`card-premium animate-fade-in ${delayClass} relative overflow-hidden`}
                 >
-                  {/* Reserved ribbon */}
+                  {/* Reserved overlay */}
                   {item.is_reserved && !item.is_group_gift && (
-                    <div className="reserved-ribbon">Занят</div>
+                    <div className="reserved-overlay">
+                      <CheckCircle size={20} weight="duotone" />
+                      Зарезервирован
+                    </div>
                   )}
 
                   {/* Image */}
-                  {item.image_url ? (
+                  {item.image_url && !hasImageError ? (
                     <div className="img-zoom h-48 w-full">
                       <img
                         src={item.image_url}
                         alt={item.name}
                         className="h-full w-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
+                        onError={() =>
+                          setImgErrors((prev) => ({ ...prev, [item.id]: true }))
+                        }
                       />
                     </div>
                   ) : (
-                    <div className="flex h-48 w-full items-center justify-center bg-gradient-to-br from-violet-50 to-fuchsia-50">
-                      <Gift className="h-12 w-12 text-violet-300" />
+                    <div
+                      className="flex h-48 w-full items-center justify-center"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, var(--color-primary), var(--color-accent-coral))",
+                        opacity: 0.15,
+                      }}
+                    >
+                      <Gift size={48} weight="duotone" className="text-gray-600 opacity-60" />
                     </div>
                   )}
 
@@ -440,9 +605,10 @@ export default function PublicWishlistPage() {
                         href={item.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mb-3 flex items-center gap-1 text-xs text-violet-500 hover:underline"
+                        className="mb-3 flex items-center gap-1 text-xs hover:underline"
+                        style={{ color: "var(--color-primary)" }}
                       >
-                        <ExternalLink className="h-3 w-3" />
+                        <ArrowSquareOut size={14} weight="duotone" />
                         Посмотреть товар
                       </a>
                     )}
@@ -460,15 +626,18 @@ export default function PublicWishlistPage() {
                         </div>
                         <p className="text-xs text-gray-500">
                           Собрано {formatPrice(collected)} из{" "}
-                          {formatPrice(item.price)} ({Math.round(progress)}
-                          %)
+                          {formatPrice(item.price)} ({Math.round(progress)}%)
                         </p>
                         {item.contribution_count > 0 && (
-                          <p className="mt-0.5 text-xs text-gray-400">
+                          <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
+                            <Users size={12} weight="duotone" />
                             {item.contribution_count}{" "}
-                            {item.contribution_count === 1
-                              ? "участник"
-                              : "участников"}
+                            {pluralize(
+                              item.contribution_count,
+                              "участник",
+                              "участника",
+                              "участников"
+                            )}
                           </p>
                         )}
                       </div>
@@ -476,47 +645,58 @@ export default function PublicWishlistPage() {
 
                     {/* Action buttons */}
                     {item.is_group_gift ? (
-                      <button
-                        onClick={() => handleContributeClick(item.id)}
-                        disabled={submitting}
-                        className="btn-primary w-full text-sm"
-                      >
-                        <Heart className="h-4 w-4" />
-                        Скинуться
-                        {progress > 0 && (
-                          <span className="ml-1 opacity-75">
-                            ({Math.round(progress)}%)
-                          </span>
-                        )}
-                      </button>
+                      progress >= 100 ? (
+                        <div className="badge-green badge w-full justify-center py-2.5 text-sm">
+                          <CheckCircle size={18} weight="duotone" />
+                          Собрано!
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleContributeClick(item.id)}
+                          disabled={isSubmitting}
+                          className="btn-coral w-full text-sm"
+                        >
+                          {isSubmitting ? (
+                            <SpinnerGap size={18} weight="duotone" className="animate-spin" />
+                          ) : (
+                            <Heart size={18} weight="duotone" />
+                          )}
+                          Скинуться
+                          {progress > 0 && progress < 100 && (
+                            <span className="ml-1 opacity-75">
+                              ({Math.round(progress)}%)
+                            </span>
+                          )}
+                        </button>
+                      )
                     ) : isReservedByMe ? (
                       <button
                         onClick={() => handleUnreserve(item.id)}
-                        disabled={submitting}
+                        disabled={isSubmitting}
                         className="btn-secondary w-full text-sm"
                       >
-                        {submitting ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                        {isSubmitting ? (
+                          <SpinnerGap size={18} weight="duotone" className="animate-spin" />
                         ) : (
-                          <X className="h-4 w-4" />
+                          <X size={18} weight="duotone" />
                         )}
-                        Отменить
+                        Отменить бронь
                       </button>
                     ) : item.is_reserved ? (
                       <div className="badge-green badge w-full justify-center py-2.5 text-sm">
-                        <CheckCircle className="h-4 w-4" />
+                        <CheckCircle size={18} weight="duotone" />
                         Зарезервирован
                       </div>
                     ) : (
                       <button
                         onClick={() => handleReserve(item.id)}
-                        disabled={submitting}
+                        disabled={isSubmitting}
                         className="btn-primary w-full text-sm"
                       >
-                        {submitting ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                        {isSubmitting ? (
+                          <SpinnerGap size={18} weight="duotone" className="animate-spin" />
                         ) : (
-                          <Gift className="h-4 w-4" />
+                          <Gift size={18} weight="duotone" />
                         )}
                         Зарезервировать
                       </button>
@@ -533,14 +713,23 @@ export default function PublicWishlistPage() {
       {showNameModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            {/* Gradient header strip */}
-            <div className="h-2 bg-gradient-to-r from-violet-600 to-fuchsia-500" />
+            <div
+              className="h-2 rounded-t-2xl"
+              style={{ background: "linear-gradient(90deg, var(--color-primary), var(--color-accent-coral))" }}
+            />
             <div className="p-8">
-              <div className="mb-2 text-4xl">&#128075;</div>
-              <h3 className="mb-1 text-xl font-bold text-gray-900">
+              <div className="mb-4 flex justify-center">
+                <div
+                  className="rounded-2xl p-3"
+                  style={{ background: "var(--color-primary)", opacity: 0.1 }}
+                >
+                  <User size={32} weight="duotone" style={{ color: "var(--color-primary)" }} />
+                </div>
+              </div>
+              <h3 className="mb-1 text-center text-xl font-bold text-gray-900">
                 Как вас зовут?
               </h3>
-              <p className="mb-6 text-sm text-gray-500">
+              <p className="mb-6 text-center text-sm text-gray-500">
                 Чтобы друзья знали от кого подарок
               </p>
               <input
@@ -564,7 +753,7 @@ export default function PublicWishlistPage() {
                   setShowNameModal(false);
                   setPendingAction(null);
                 }}
-                className="mt-3 w-full text-center text-sm text-gray-400 hover:text-gray-600 transition"
+                className="mt-3 w-full text-center text-sm text-gray-400 transition hover:text-gray-600"
               >
                 Отмена
               </button>
@@ -577,17 +766,29 @@ export default function PublicWishlistPage() {
       {showContributeModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            {/* Gradient header strip */}
-            <div className="h-2 bg-gradient-to-r from-violet-600 to-fuchsia-500" />
+            <div
+              className="h-2 rounded-t-2xl"
+              style={{ background: "linear-gradient(90deg, var(--color-primary), var(--color-accent-gold))" }}
+            />
             <div className="p-8">
-              <h3 className="mb-1 text-xl font-bold text-gray-900">
+              <div className="mb-4 flex justify-center">
+                <div
+                  className="rounded-2xl p-3"
+                  style={{ background: "var(--color-accent-coral)", opacity: 0.15 }}
+                >
+                  <Heart size={32} weight="duotone" style={{ color: "var(--color-accent-coral)" }} />
+                </div>
+              </div>
+              <h3 className="mb-1 text-center text-xl font-bold text-gray-900">
                 Внести вклад
               </h3>
               {contribItem && (
-                <p className="mb-1 text-sm text-gray-500">{contribItem.name}</p>
+                <p className="mb-1 text-center text-sm text-gray-500">
+                  {contribItem.name}
+                </p>
               )}
               {contribItem?.price && contribRemaining > 0 && (
-                <p className="mb-5 text-xs text-gray-400">
+                <p className="mb-5 text-center text-xs text-gray-400">
                   Осталось: {formatPrice(contribRemaining)}
                 </p>
               )}
@@ -599,21 +800,29 @@ export default function PublicWishlistPage() {
                   value={contribAmount}
                   onChange={(e) => setContribAmount(e.target.value)}
                   min="1"
-                  placeholder="Сумма, ₽"
+                  placeholder="Сумма, \u20BD"
                   className="input-premium"
                   autoFocus
                 />
 
+                {/* Warning if exceeds remaining */}
+                {contribExceedsRemaining && (
+                  <p className="mt-2 text-xs" style={{ color: "var(--color-accent-coral)" }}>
+                    Сумма превышает остаток. Будет ограничена до{" "}
+                    {formatPrice(contribRemaining)}
+                  </p>
+                )}
+
                 {/* Quick amount buttons */}
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {[100, 500, 1000].map((v) => (
                     <button
                       key={v}
                       type="button"
                       onClick={() => setContribAmount(String(v))}
-                      className="cursor-pointer rounded-full border border-gray-200 px-4 py-2 text-sm font-medium transition hover:border-violet-400 hover:bg-violet-50 hover:text-violet-600"
+                      className="filter-chip"
                     >
-                      {v} ₽
+                      {v} \u20BD
                     </button>
                   ))}
                   {contribRemaining > 0 && (
@@ -622,9 +831,9 @@ export default function PublicWishlistPage() {
                       onClick={() =>
                         setContribAmount(String(contribRemaining))
                       }
-                      className="cursor-pointer rounded-full border border-gray-200 px-4 py-2 text-sm font-medium transition hover:border-violet-400 hover:bg-violet-50 hover:text-violet-600"
+                      className="filter-chip"
                     >
-                      Всё
+                      Всё ({formatPrice(contribRemaining)})
                     </button>
                   )}
                 </div>
@@ -645,21 +854,30 @@ export default function PublicWishlistPage() {
               <button
                 onClick={handleContribute}
                 disabled={
-                  submitting ||
+                  !!submitting[contribItemId] ||
                   !contribAmount ||
                   parseFloat(contribAmount) <= 0
                 }
                 className="btn-primary w-full text-sm"
               >
-                {submitting && (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                {submitting[contribItemId] ? (
+                  <SpinnerGap size={18} weight="duotone" className="animate-spin" />
+                ) : (
+                  <Heart size={18} weight="duotone" />
                 )}
-                Внести {contribAmount ? `${contribAmount} ₽` : ""}
+                Внести{" "}
+                {contribAmount
+                  ? formatPrice(
+                      contribExceedsRemaining
+                        ? contribRemaining
+                        : parseFloat(contribAmount)
+                    )
+                  : ""}
               </button>
 
               <button
                 onClick={() => setShowContributeModal(false)}
-                className="mt-3 w-full text-center text-sm text-gray-400 hover:text-gray-600 transition"
+                className="mt-3 w-full text-center text-sm text-gray-400 transition hover:text-gray-600"
               >
                 Отмена
               </button>

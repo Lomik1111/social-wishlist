@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <defs>
+    <linearGradient id="celGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6C5CE7"/>
+      <stop offset="100%" stop-color="#A29BFE"/>
+    </linearGradient>
+    <linearGradient id="celGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FD79A8"/>
+      <stop offset="100%" stop-color="#FDCB6E"/>
+    </linearGradient>
+  </defs>
+  <!-- Confetti pieces -->
+  <rect x="60" y="40" width="12" height="12" rx="2" fill="#FD79A8" transform="rotate(30 66 46)" opacity="0.8"/>
+  <rect x="120" y="20" width="10" height="10" rx="2" fill="#6C5CE7" transform="rotate(-20 125 25)" opacity="0.7"/>
+  <rect x="260" y="30" width="14" height="8" rx="2" fill="#FDCB6E" transform="rotate(45 267 34)" opacity="0.8"/>
+  <rect x="320" y="50" width="10" height="10" rx="2" fill="#00B894" transform="rotate(-30 325 55)" opacity="0.7"/>
+  <rect x="80" y="80" width="8" height="14" rx="2" fill="#FDCB6E" transform="rotate(60 84 87)" opacity="0.6"/>
+  <rect x="340" y="100" width="12" height="8" rx="2" fill="#FD79A8" transform="rotate(-45 346 104)" opacity="0.6"/>
+  <circle cx="180" cy="35" r="5" fill="#00B894" opacity="0.6"/>
+  <circle cx="40" cy="140" r="4" fill="#A29BFE" opacity="0.5"/>
+  <circle cx="360" cy="150" r="3" fill="#FDCB6E" opacity="0.5"/>
+  <!-- Party popper left -->
+  <path d="M100 250 L140 120" stroke="url(#celGrad1)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M140 120 L125 135 L155 125 L140 120Z" fill="#6C5CE7"/>
+  <!-- Party popper right -->
+  <path d="M300 250 L260 120" stroke="url(#celGrad2)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M260 120 L275 135 L245 125 L260 120Z" fill="#FD79A8"/>
+  <!-- Central star burst -->
+  <g transform="translate(200 140)">
+    <path d="M0 -40 L10 -12 L40 -12 L16 6 L26 34 L0 16 L-26 34 L-16 6 L-40 -12 L-10 -12Z" fill="url(#celGrad2)" opacity="0.9"/>
+  </g>
+  <!-- Smaller stars -->
+  <path d="M150 90 L154 78 L158 90 L170 94 L158 98 L154 110 L150 98 L138 94Z" fill="#FDCB6E" opacity="0.7"/>
+  <path d="M250 85 L253 77 L256 85 L264 88 L256 91 L253 99 L250 91 L242 88Z" fill="#6C5CE7" opacity="0.6"/>
+  <!-- Streamers -->
+  <path d="M130 130 Q150 100 140 70" stroke="#FD79A8" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <path d="M270 130 Q250 95 265 65" stroke="#6C5CE7" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <path d="M180 110 Q195 80 185 50" stroke="#FDCB6E" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <path d="M220 115 Q210 85 225 55" stroke="#00B894" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <!-- Ground shadow -->
+  <ellipse cx="200" cy="270" rx="120" ry="12" fill="#6C5CE7" opacity="0.05"/>
+</svg>

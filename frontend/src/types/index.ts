@@ -14,6 +14,7 @@ export interface Wishlist {
   event_date: string | null;
   share_token: string;
   is_active: boolean;
+  theme: string;
   item_count: number;
   created_at: string;
 }
@@ -37,6 +38,7 @@ export interface Item {
   image_url: string | null;
   price: string | null;
   is_group_gift: boolean;
+  priority: string;
   sort_order: number;
   created_at: string;
 }
@@ -49,6 +51,7 @@ export interface ItemPublic {
   image_url: string | null;
   price: string | null;
   is_group_gift: boolean;
+  priority: string;
   is_reserved: boolean;
   contribution_total: string;
   contribution_count: number;

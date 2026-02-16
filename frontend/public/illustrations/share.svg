@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <defs>
+    <linearGradient id="shGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6C5CE7"/>
+      <stop offset="100%" stop-color="#A29BFE"/>
+    </linearGradient>
+    <linearGradient id="shGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FD79A8"/>
+      <stop offset="100%" stop-color="#FDCB6E"/>
+    </linearGradient>
+    <linearGradient id="shBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6C5CE7" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#FD79A8" stop-opacity="0.03"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <ellipse cx="200" cy="150" rx="170" ry="120" fill="url(#shBg)"/>
+  <!-- Central node -->
+  <circle cx="200" cy="140" r="30" fill="url(#shGrad1)"/>
+  <path d="M192 140 L200 132 L208 140 M200 132 L200 152" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Connection lines -->
+  <line x1="170" y1="140" x2="100" y2="100" stroke="#A29BFE" stroke-width="2" opacity="0.4" stroke-dasharray="4 3"/>
+  <line x1="230" y1="140" x2="300" y2="100" stroke="#FD79A8" stroke-width="2" opacity="0.4" stroke-dasharray="4 3"/>
+  <line x1="200" y1="170" x2="200" y2="230" stroke="#FDCB6E" stroke-width="2" opacity="0.4" stroke-dasharray="4 3"/>
+  <!-- Friend nodes -->
+  <circle cx="100" cy="100" r="18" fill="#E8DAFF" stroke="#A29BFE" stroke-width="2"/>
+  <circle cx="100" cy="96" r="6" fill="#A29BFE"/>
+  <path d="M88 108 Q100 118 112 108" stroke="#A29BFE" stroke-width="2" fill="none"/>
+  <circle cx="300" cy="100" r="18" fill="#FFE4EE" stroke="#FD79A8" stroke-width="2"/>
+  <circle cx="300" cy="96" r="6" fill="#FD79A8"/>
+  <path d="M288 108 Q300 118 312 108" stroke="#FD79A8" stroke-width="2" fill="none"/>
+  <circle cx="200" cy="230" r="18" fill="#FFF8E1" stroke="#FDCB6E" stroke-width="2"/>
+  <circle cx="200" cy="226" r="6" fill="#FDCB6E"/>
+  <path d="M188 238 Q200 248 212 238" stroke="#FDCB6E" stroke-width="2" fill="none"/>
+  <!-- Sparkles -->
+  <circle cx="60" cy="180" r="3" fill="#6C5CE7" opacity="0.4"/>
+  <circle cx="340" cy="170" r="4" fill="#FD79A8" opacity="0.3"/>
+  <path d="M330 50 L333 42 L336 50 L344 53 L336 56 L333 64 L330 56 L322 53Z" fill="#FDCB6E" opacity="0.5"/>
+  <path d="M70 60 L72 54 L74 60 L80 62 L74 64 L72 70 L70 64 L64 62Z" fill="#A29BFE" opacity="0.4"/>
+</svg>

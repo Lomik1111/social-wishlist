@@ -1,25 +1,27 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from uuid import UUID
 from datetime import datetime
 from decimal import Decimal
 
 
 class ItemCreate(BaseModel):
-    name: str
-    description: str | None = None
-    url: str | None = None
-    image_url: str | None = None
+    name: str = Field(max_length=255)
+    description: str | None = Field(default=None, max_length=1000)
+    url: str | None = Field(default=None, max_length=500)
+    image_url: str | None = Field(default=None, max_length=500)
     price: Decimal | None = None
     is_group_gift: bool = False
+    priority: str = "nice_to_have"
 
 
 class ItemUpdate(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    url: str | None = None
-    image_url: str | None = None
+    name: str | None = Field(default=None, max_length=255)
+    description: str | None = Field(default=None, max_length=1000)
+    url: str | None = Field(default=None, max_length=500)
+    image_url: str | None = Field(default=None, max_length=500)
     price: Decimal | None = None
     is_group_gift: bool | None = None
+    priority: str | None = None
 
 
 class ItemResponse(BaseModel):
@@ -30,6 +32,7 @@ class ItemResponse(BaseModel):
     image_url: str | None
     price: Decimal | None
     is_group_gift: bool
+    priority: str
     sort_order: int
     created_at: datetime
 
@@ -44,6 +47,7 @@ class ItemPublicResponse(BaseModel):
     image_url: str | None
     price: Decimal | None
     is_group_gift: bool
+    priority: str = "nice_to_have"
     is_reserved: bool = False
     contribution_total: Decimal = Decimal("0")
     contribution_count: int = 0
@@ -60,6 +64,7 @@ class ItemOwnerResponse(BaseModel):
     image_url: str | None
     price: Decimal | None
     is_group_gift: bool
+    priority: str = "nice_to_have"
     sort_order: int
     is_reserved: bool = False
     reservation_count: int = 0

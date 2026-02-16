@@ -1,6 +1,7 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
 from app.database import get_db
 from app.models.user import User
@@ -29,6 +30,10 @@ async def reserve_item(
     # Check ownership
     wl_result = await db.execute(select(Wishlist).where(Wishlist.id == item.wishlist_id))
     wishlist = wl_result.scalar_one()
+
+    if not wishlist.is_active:
+        raise HTTPException(status_code=400, detail="Wishlist is not active")
+
     if user and wishlist.user_id == user.id:
         raise HTTPException(status_code=403, detail="Cannot reserve your own item")
 
@@ -51,7 +56,11 @@ async def reserve_item(
         is_full_reservation=not item.is_group_gift,
     )
     db.add(reservation)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Reservation conflict")
 
     await ws_manager.broadcast(str(item.wishlist_id), {
         "type": "item_reserved",

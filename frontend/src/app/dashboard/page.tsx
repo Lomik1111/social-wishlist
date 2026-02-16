@@ -4,24 +4,30 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
 import api from "@/lib/api";
-import { formatDate } from "@/lib/utils";
+import { formatDate, pluralize, countdownText, countdownUrgency } from "@/lib/utils";
 import type { Wishlist } from "@/types";
-import { Plus, Gift, Share2, Calendar, Loader2, ExternalLink, Sparkles } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Plus,
+  Gift,
+  ShareNetwork,
+  Calendar,
+  Trash,
+  Eye,
+  ArrowSquareOut,
+  Sparkle,
+  CaretRight,
+} from "@phosphor-icons/react";
+import EmptyState from "@/components/ui/EmptyState";
+import ShareModal from "@/components/ui/ShareModal";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
-const occasionConfig: Record<string, { emoji: string; badge: string }> = {
-  birthday: { emoji: "🎂", badge: "badge-pink" },
-  new_year: { emoji: "🎄", badge: "badge-blue" },
-  wedding: { emoji: "💍", badge: "badge-pink" },
-  christmas: { emoji: "🎅", badge: "badge-amber" },
-  other: { emoji: "🎁", badge: "badge-purple" },
-};
-
-const occasionLabels: Record<string, string> = {
-  birthday: "День рождения",
-  new_year: "Новый год",
-  wedding: "Свадьба",
-  christmas: "Рождество",
-  other: "Другое",
+const occasionConfig: Record<string, { label: string; badge: string }> = {
+  birthday: { label: "День рождения", badge: "badge-coral" },
+  new_year: { label: "Новый год", badge: "badge-purple" },
+  wedding: { label: "Свадьба", badge: "badge-gold" },
+  christmas: { label: "Рождество", badge: "badge-amber" },
+  other: { label: "Другое", badge: "badge-green" },
 };
 
 export default function DashboardPage() {
@@ -29,7 +35,21 @@ export default function DashboardPage() {
   const router = useRouter();
   const [wishlists, setWishlists] = useState<Wishlist[]>([]);
   const [loading, setLoading] = useState(true);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Share modal state
+  const [shareModal, setShareModal] = useState<{ open: boolean; url: string; title: string }>({
+    open: false,
+    url: "",
+    title: "",
+  });
+
+  // Delete confirm state
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id: string; title: string }>({
+    open: false,
+    id: "",
+    title: "",
+  });
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -51,11 +71,27 @@ export default function DashboardPage() {
     }
   }, [user]);
 
-  const copyLink = (shareToken: string, id: string) => {
-    const url = `${window.location.origin}/w/${shareToken}`;
-    navigator.clipboard.writeText(url);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+  const openShareModal = (w: Wishlist) => {
+    const url = `${window.location.origin}/w/${w.share_token}`;
+    setShareModal({ open: true, url, title: w.title });
+  };
+
+  const openDeleteDialog = (w: Wishlist) => {
+    setDeleteDialog({ open: true, id: w.id, title: w.title });
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.delete(`/wishlists/${deleteDialog.id}`);
+      setWishlists((prev) => prev.filter((w) => w.id !== deleteDialog.id));
+      toast.success("Вишлист удален");
+      setDeleteDialog({ open: false, id: "", title: "" });
+    } catch {
+      toast.error("Не удалось удалить вишлист");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (authLoading || loading) {
@@ -71,9 +107,14 @@ export default function DashboardPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="card-premium p-6">
-              <div className="skeleton h-4 w-3/4 mb-3 rounded" />
-              <div className="skeleton h-3 w-1/2 mb-6 rounded" />
-              <div className="skeleton h-3 w-1/3 rounded" />
+              <div className="skeleton h-5 w-3/4 mb-3 rounded" />
+              <div className="skeleton h-4 w-1/3 mb-4 rounded" />
+              <div className="skeleton h-3 w-full mb-2 rounded" />
+              <div className="skeleton h-3 w-2/3 mb-4 rounded" />
+              <div className="flex gap-3">
+                <div className="skeleton h-3 w-16 rounded" />
+                <div className="skeleton h-3 w-20 rounded" />
+              </div>
             </div>
           ))}
         </div>
@@ -83,142 +124,156 @@ export default function DashboardPage() {
 
   return (
     <div>
+      {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold gradient-text">Мои вишлисты</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
             {wishlists.length > 0
-              ? `У вас ${wishlists.length} ${wishlists.length === 1 ? "вишлист" : "вишлистов"}`
+              ? `У вас ${wishlists.length} ${pluralize(wishlists.length, "вишлист", "вишлиста", "вишлистов")}`
               : "Создайте свой первый вишлист"}
           </p>
         </div>
         <Link href="/wishlist/create" className="btn-primary flex items-center gap-2">
-          <Plus className="h-4 w-4" />
+          <Plus size={18} weight="bold" />
           Создать
-          <Sparkles className="h-4 w-4" />
+          <Sparkle size={18} weight="duotone" />
         </Link>
       </div>
 
+      {/* Empty state */}
       {wishlists.length === 0 ? (
-        <div className="relative flex flex-col items-center gap-6 rounded-2xl border-2 border-dashed border-gray-200 py-20 overflow-hidden">
-          {/* Dot pattern background */}
-          <div
-            className="absolute inset-0 -z-10 opacity-30"
-            style={{
-              backgroundImage: "radial-gradient(circle, #c4b5fd 1px, transparent 1px)",
-              backgroundSize: "24px 24px",
-            }}
-          />
-
-          {/* Decorative SVG: stylized empty gift box with question mark */}
-          <div className="animate-float">
-            <svg
-              width="150"
-              height="150"
-              viewBox="0 0 150 150"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              {/* Box body */}
-              <rect x="25" y="65" width="100" height="65" rx="8" fill="url(#giftGrad)" opacity="0.15" />
-              <rect x="25" y="65" width="100" height="65" rx="8" stroke="#667eea" strokeWidth="2.5" />
-              {/* Box lid */}
-              <rect x="20" y="50" width="110" height="20" rx="6" fill="url(#giftGrad)" opacity="0.25" />
-              <rect x="20" y="50" width="110" height="20" rx="6" stroke="#667eea" strokeWidth="2.5" />
-              {/* Ribbon vertical */}
-              <rect x="70" y="50" width="10" height="80" fill="#f093fb" opacity="0.4" />
-              <line x1="75" y1="50" x2="75" y2="130" stroke="#f093fb" strokeWidth="2" />
-              {/* Ribbon horizontal */}
-              <rect x="20" y="55" width="110" height="10" fill="#f093fb" opacity="0.2" />
-              {/* Bow left */}
-              <ellipse cx="62" cy="46" rx="14" ry="10" fill="none" stroke="#f093fb" strokeWidth="2.5" />
-              {/* Bow right */}
-              <ellipse cx="88" cy="46" rx="14" ry="10" fill="none" stroke="#f093fb" strokeWidth="2.5" />
-              {/* Bow knot */}
-              <circle cx="75" cy="48" r="5" fill="#f093fb" />
-              {/* Question mark */}
-              <text
-                x="75"
-                y="108"
-                textAnchor="middle"
-                fontSize="32"
-                fontWeight="bold"
-                fill="#667eea"
-                opacity="0.6"
-              >
-                ?
-              </text>
-              <defs>
-                <linearGradient id="giftGrad" x1="25" y1="50" x2="125" y2="130" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#667eea" />
-                  <stop offset="1" stopColor="#f093fb" />
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
-
-          <h3 className="text-xl font-bold text-gray-800">Пока пусто</h3>
-          <p className="max-w-sm text-center text-sm text-gray-500">
-            Создайте свой первый вишлист и поделитесь им с близкими
-          </p>
-          <Link href="/wishlist/create" className="btn-primary">
-            Создать вишлист
-          </Link>
-        </div>
+        <EmptyState
+          illustration="/illustrations/empty-wishlist.svg"
+          title="Пока пусто"
+          description="Создайте свой первый вишлист и поделитесь им с близкими"
+          action={
+            <Link href="/wishlist/create" className="btn-primary">
+              Создать вишлист
+            </Link>
+          }
+        />
       ) : (
+        /* Wishlist grid */
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {wishlists.map((w, index) => (
-            <div
-              key={w.id}
-              className="group card-premium p-6 animate-fade-in relative"
-              style={{ animationDelay: `${(index % 6) * 100}ms` }}
-            >
-              <Link href={`/wishlist/${w.id}`} className="block">
-                <div className="mb-3 flex items-start justify-between">
-                  <h3 className={`text-lg font-semibold text-gray-900 transition group-hover:gradient-text`}>
-                    {w.title}
-                  </h3>
-                  <ExternalLink className="h-4 w-4 text-gray-300 group-hover:text-violet-400 transition shrink-0 ml-2" />
-                </div>
+          {wishlists.map((w, index) => {
+            const countdown = countdownText(w.event_date);
+            const urgency = countdownUrgency(w.event_date);
+            const occasion = w.occasion ? occasionConfig[w.occasion] : null;
 
-                {w.occasion && occasionConfig[w.occasion] && (
-                  <span className={`${occasionConfig[w.occasion].badge} mb-2 inline-flex items-center gap-1`}>
-                    <span>{occasionConfig[w.occasion].emoji}</span>
-                    {occasionLabels[w.occasion] || w.occasion}
-                  </span>
-                )}
+            return (
+              <div
+                key={w.id}
+                className="group card-premium p-6 animate-fade-in relative flex flex-col"
+                style={{ animationDelay: `${(index % 6) * 100}ms` }}
+              >
+                {/* Card body as link */}
+                <Link href={`/wishlist/${w.id}`} className="block flex-1">
+                  {/* Title row */}
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)] transition group-hover:gradient-text">
+                      {w.title}
+                    </h3>
+                    <ArrowSquareOut
+                      size={18}
+                      weight="duotone"
+                      className="shrink-0 text-[var(--color-text-tertiary)] group-hover:text-[var(--color-primary)] transition"
+                    />
+                  </div>
 
-                {w.description && (
-                  <p className="mb-3 text-sm text-gray-500 line-clamp-2">{w.description}</p>
-                )}
-
-                <div className="flex items-center gap-4 text-xs text-gray-400">
-                  <span className="flex items-center gap-1">
-                    <Gift className="h-3.5 w-3.5" />
-                    {w.item_count} {w.item_count === 1 ? "подарок" : "подарков"}
-                  </span>
-                  {w.event_date && (
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5" />
-                      {formatDate(w.event_date)}
+                  {/* Occasion badge */}
+                  {occasion && (
+                    <span className={`badge ${occasion.badge} mb-2`}>
+                      {occasion.label}
                     </span>
                   )}
-                </div>
-              </Link>
 
-              <div className="mt-4 border-t border-gray-100 pt-3">
-                <button
-                  onClick={() => copyLink(w.share_token, w.id)}
-                  className="flex items-center gap-1.5 text-xs font-medium text-violet-600 transition hover:text-violet-700"
-                >
-                  <Share2 className="h-3.5 w-3.5" />
-                  {copiedId === w.id ? "Скопировано!" : "Скопировать ссылку"}
-                </button>
+                  {/* Description */}
+                  {w.description && (
+                    <p className="mb-3 text-sm text-[var(--color-text-secondary)] line-clamp-2">
+                      {w.description}
+                    </p>
+                  )}
+
+                  {/* Stats row */}
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--color-text-tertiary)]">
+                    <span className="flex items-center gap-1">
+                      <Gift size={14} weight="duotone" />
+                      {w.item_count} {pluralize(w.item_count, "подарок", "подарка", "подарков")}
+                    </span>
+                    {w.event_date && (
+                      <span className="flex items-center gap-1">
+                        <Calendar size={14} weight="duotone" />
+                        {formatDate(w.event_date)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Countdown badge */}
+                  {countdown && (
+                    <div className="mt-3">
+                      <span
+                        className={`countdown-badge ${urgency === "urgent" ? "urgent" : ""} ${urgency === "soon" ? "soon" : ""}`}
+                      >
+                        {countdown}
+                      </span>
+                    </div>
+                  )}
+                </Link>
+
+                {/* Action buttons */}
+                <div className="mt-4 border-t border-gray-100 pt-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => openShareModal(w)}
+                      className="flex items-center gap-1.5 text-xs font-medium text-[var(--color-primary)] transition hover:text-[var(--color-primary-dark)]"
+                      title="Поделиться"
+                    >
+                      <ShareNetwork size={16} weight="duotone" />
+                      Поделиться
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/wishlist/${w.id}`}
+                      className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-tertiary)] transition hover:text-[var(--color-primary)]"
+                      title="Открыть"
+                    >
+                      <Eye size={16} weight="duotone" />
+                    </Link>
+                    <button
+                      onClick={() => openDeleteDialog(w)}
+                      className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-tertiary)] transition hover:text-[var(--color-danger)]"
+                      title="Удалить"
+                    >
+                      <Trash size={16} weight="duotone" />
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
+
+      {/* Share modal */}
+      <ShareModal
+        isOpen={shareModal.open}
+        onClose={() => setShareModal({ open: false, url: "", title: "" })}
+        shareUrl={shareModal.url}
+        title={shareModal.title}
+      />
+
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        isOpen={deleteDialog.open}
+        onClose={() => setDeleteDialog({ open: false, id: "", title: "" })}
+        onConfirm={handleDelete}
+        title="Удалить вишлист?"
+        description={`Вишлист "${deleteDialog.title}" и все его подарки будут удалены навсегда.`}
+        confirmText="Удалить"
+        loading={deleting}
+      />
     </div>
   );
 }

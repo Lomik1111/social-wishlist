@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <defs>
+    <linearGradient id="emptyGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6C5CE7" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#A29BFE" stop-opacity="0.05"/>
+    </linearGradient>
+    <linearGradient id="emptyGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6C5CE7"/>
+      <stop offset="100%" stop-color="#A29BFE"/>
+    </linearGradient>
+    <linearGradient id="emptyGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FD79A8"/>
+      <stop offset="100%" stop-color="#FDCB6E"/>
+    </linearGradient>
+  </defs>
+  <!-- Background blob -->
+  <ellipse cx="200" cy="160" rx="160" ry="120" fill="url(#emptyGrad1)"/>
+  <!-- Open box back -->
+  <path d="M120 170 L120 240 C120 248 126 254 134 254 L266 254 C274 254 280 248 280 240 L280 170" fill="#E8DAFF" stroke="#6C5CE7" stroke-width="2"/>
+  <!-- Box flap left -->
+  <path d="M120 170 L140 130 L200 140 L200 170Z" fill="#D5C8FF" stroke="#6C5CE7" stroke-width="2"/>
+  <!-- Box flap right -->
+  <path d="M280 170 L260 130 L200 140 L200 170Z" fill="#D5C8FF" stroke="#6C5CE7" stroke-width="2"/>
+  <!-- Dashed lines inside box (empty) -->
+  <line x1="155" y1="195" x2="245" y2="195" stroke="#A29BFE" stroke-width="2" stroke-dasharray="6 4" opacity="0.4"/>
+  <line x1="165" y1="215" x2="235" y2="215" stroke="#A29BFE" stroke-width="2" stroke-dasharray="6 4" opacity="0.3"/>
+  <line x1="175" y1="235" x2="225" y2="235" stroke="#A29BFE" stroke-width="2" stroke-dasharray="6 4" opacity="0.2"/>
+  <!-- Plus icon floating above -->
+  <circle cx="200" cy="100" r="24" fill="url(#emptyGrad2)" opacity="0.9"/>
+  <line x1="190" y1="100" x2="210" y2="100" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  <line x1="200" y1="90" x2="200" y2="110" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  <!-- Sparkles -->
+  <circle cx="90" cy="120" r="3" fill="#FD79A8" opacity="0.6"/>
+  <circle cx="310" cy="130" r="4" fill="#FDCB6E" opacity="0.5"/>
+  <circle cx="320" cy="200" r="3" fill="#6C5CE7" opacity="0.4"/>
+  <path d="M80 200 L83 192 L86 200 L94 203 L86 206 L83 214 L80 206 L72 203Z" fill="#FDCB6E" opacity="0.5"/>
+  <path d="M330 160 L332 155 L334 160 L339 162 L334 164 L332 169 L330 164 L325 162Z" fill="#A29BFE" opacity="0.5"/>
+</svg>

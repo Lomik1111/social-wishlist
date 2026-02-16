@@ -31,6 +31,10 @@ async def contribute(
 
     wl_result = await db.execute(select(Wishlist).where(Wishlist.id == item.wishlist_id))
     wishlist = wl_result.scalar_one()
+
+    if not wishlist.is_active:
+        raise HTTPException(status_code=400, detail="Wishlist is not active")
+
     if user and wishlist.user_id == user.id:
         raise HTTPException(status_code=403, detail="Cannot contribute to your own item")
 
@@ -39,6 +43,19 @@ async def contribute(
 
     if data.amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be positive")
+
+    # Cap contribution to remaining amount if item has a price
+    if item.price and item.price > 0:
+        existing_total_result = await db.execute(
+            select(sa_func.coalesce(sa_func.sum(Contribution.amount), 0))
+            .where(Contribution.item_id == item_id)
+        )
+        existing_total = existing_total_result.scalar_one()
+        remaining = item.price - existing_total
+        if remaining <= 0:
+            raise HTTPException(status_code=400, detail="Item is already fully funded")
+        if data.amount > remaining:
+            data.amount = remaining
 
     contribution = Contribution(
         item_id=item_id,

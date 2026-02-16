@@ -13,8 +13,53 @@ from app.models.contribution import Contribution
 from app.schemas.wishlist import WishlistCreate, WishlistUpdate, WishlistResponse, WishlistPublicResponse
 from app.schemas.item import ItemOwnerResponse, ItemPublicResponse
 from app.dependencies import get_current_user
+from app.services.websocket_manager import ws_manager
 
 router = APIRouter()
+
+
+# ---------------------------------------------------------------------------
+# Helper: build WishlistResponse from a Wishlist ORM object
+# ---------------------------------------------------------------------------
+
+def _build_wishlist_response(wishlist: Wishlist, item_count: int = 0) -> WishlistResponse:
+    return WishlistResponse(
+        id=wishlist.id,
+        title=wishlist.title,
+        description=wishlist.description,
+        occasion=wishlist.occasion,
+        event_date=wishlist.event_date,
+        share_token=wishlist.share_token,
+        is_active=wishlist.is_active,
+        theme=wishlist.theme,
+        item_count=item_count,
+        created_at=wishlist.created_at,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Helper: batch-fetch contribution aggregates for a list of item IDs
+# ---------------------------------------------------------------------------
+
+async def _batch_contribution_stats(
+    db: AsyncSession, item_ids: list[UUID]
+) -> dict[UUID, tuple[Decimal, int]]:
+    """Return {item_id: (total_amount, count)} for the given item IDs in one query."""
+    if not item_ids:
+        return {}
+    result = await db.execute(
+        select(
+            Contribution.item_id,
+            sa_func.coalesce(sa_func.sum(Contribution.amount), 0),
+            sa_func.count(Contribution.id),
+        )
+        .where(Contribution.item_id.in_(item_ids))
+        .group_by(Contribution.item_id)
+    )
+    stats: dict[UUID, tuple[Decimal, int]] = {}
+    for row in result.all():
+        stats[row[0]] = (row[1], row[2])
+    return stats
 
 
 @router.get("", response_model=list[WishlistResponse])
@@ -27,17 +72,7 @@ async def get_my_wishlists(user: User = Depends(get_current_user), db: AsyncSess
     )
     wishlists = result.scalars().all()
     return [
-        WishlistResponse(
-            id=w.id,
-            title=w.title,
-            description=w.description,
-            occasion=w.occasion,
-            event_date=w.event_date,
-            share_token=w.share_token,
-            is_active=w.is_active,
-            item_count=len([i for i in w.items if not i.is_deleted]),
-            created_at=w.created_at,
-        )
+        _build_wishlist_response(w, item_count=len([i for i in w.items if not i.is_deleted]))
         for w in wishlists
     ]
 
@@ -47,17 +82,7 @@ async def create_wishlist(data: WishlistCreate, user: User = Depends(get_current
     wishlist = Wishlist(user_id=user.id, **data.model_dump())
     db.add(wishlist)
     await db.flush()
-    return WishlistResponse(
-        id=wishlist.id,
-        title=wishlist.title,
-        description=wishlist.description,
-        occasion=wishlist.occasion,
-        event_date=wishlist.event_date,
-        share_token=wishlist.share_token,
-        is_active=wishlist.is_active,
-        item_count=0,
-        created_at=wishlist.created_at,
-    )
+    return _build_wishlist_response(wishlist, item_count=0)
 
 
 @router.get("/{wishlist_id}")
@@ -71,18 +96,15 @@ async def get_wishlist(wishlist_id: UUID, user: User = Depends(get_current_user)
     if not wishlist:
         raise HTTPException(status_code=404, detail="Wishlist not found")
 
-    items_response = []
-    for item in sorted(wishlist.items, key=lambda i: i.sort_order):
-        if item.is_deleted:
-            continue
+    active_items = [i for i in sorted(wishlist.items, key=lambda i: i.sort_order) if not i.is_deleted]
+    active_item_ids = [i.id for i in active_items]
 
-        contrib_result = await db.execute(
-            select(sa_func.coalesce(sa_func.sum(Contribution.amount), 0), sa_func.count(Contribution.id))
-            .where(Contribution.item_id == item.id)
-        )
-        contrib_row = contrib_result.one()
-        total = contrib_row[0]
-        count = contrib_row[1]
+    # Batch query for contribution stats (fixes N+1)
+    contrib_stats = await _batch_contribution_stats(db, active_item_ids)
+
+    items_response = []
+    for item in active_items:
+        total, count = contrib_stats.get(item.id, (Decimal(0), 0))
         progress = float(total / item.price * 100) if item.price and item.price > 0 else 0.0
 
         items_response.append(ItemOwnerResponse(
@@ -93,6 +115,7 @@ async def get_wishlist(wishlist_id: UUID, user: User = Depends(get_current_user)
             image_url=item.image_url,
             price=item.price,
             is_group_gift=item.is_group_gift,
+            priority=item.priority,
             sort_order=item.sort_order,
             is_reserved=len(item.reservations) > 0,
             reservation_count=len(item.reservations),
@@ -103,17 +126,7 @@ async def get_wishlist(wishlist_id: UUID, user: User = Depends(get_current_user)
         ))
 
     return {
-        "wishlist": WishlistResponse(
-            id=wishlist.id,
-            title=wishlist.title,
-            description=wishlist.description,
-            occasion=wishlist.occasion,
-            event_date=wishlist.event_date,
-            share_token=wishlist.share_token,
-            is_active=wishlist.is_active,
-            item_count=len(items_response),
-            created_at=wishlist.created_at,
-        ),
+        "wishlist": _build_wishlist_response(wishlist, item_count=len(items_response)),
         "items": items_response,
     }
 
@@ -133,17 +146,7 @@ async def update_wishlist(wishlist_id: UUID, data: WishlistUpdate, user: User = 
     items_result = await db.execute(select(Item).where(Item.wishlist_id == wishlist.id, Item.is_deleted == False))
     item_count = len(items_result.scalars().all())
 
-    return WishlistResponse(
-        id=wishlist.id,
-        title=wishlist.title,
-        description=wishlist.description,
-        occasion=wishlist.occasion,
-        event_date=wishlist.event_date,
-        share_token=wishlist.share_token,
-        is_active=wishlist.is_active,
-        item_count=item_count,
-        created_at=wishlist.created_at,
-    )
+    return _build_wishlist_response(wishlist, item_count=item_count)
 
 
 @router.delete("/{wishlist_id}")
@@ -153,6 +156,12 @@ async def delete_wishlist(wishlist_id: UUID, user: User = Depends(get_current_us
     if not wishlist:
         raise HTTPException(status_code=404, detail="Wishlist not found")
     await db.delete(wishlist)
+
+    await ws_manager.broadcast(str(wishlist_id), {
+        "type": "wishlist_deleted",
+        "wishlist_id": str(wishlist_id),
+    })
+
     return {"message": "Wishlist deleted"}
 
 
@@ -168,18 +177,15 @@ async def get_public_wishlist(share_token: str, db: AsyncSession = Depends(get_d
     if not wishlist:
         raise HTTPException(status_code=404, detail="Wishlist not found")
 
-    items_response = []
-    for item in sorted(wishlist.items, key=lambda i: i.sort_order):
-        if item.is_deleted:
-            continue
+    active_items = [i for i in sorted(wishlist.items, key=lambda i: i.sort_order) if not i.is_deleted]
+    active_item_ids = [i.id for i in active_items]
 
-        contrib_result = await db.execute(
-            select(sa_func.coalesce(sa_func.sum(Contribution.amount), 0), sa_func.count(Contribution.id))
-            .where(Contribution.item_id == item.id)
-        )
-        contrib_row = contrib_result.one()
-        total = contrib_row[0]
-        count = contrib_row[1]
+    # Batch query for contribution stats (fixes N+1)
+    contrib_stats = await _batch_contribution_stats(db, active_item_ids)
+
+    items_response = []
+    for item in active_items:
+        total, count = contrib_stats.get(item.id, (Decimal(0), 0))
         progress = float(total / item.price * 100) if item.price and item.price > 0 else 0.0
 
         items_response.append(ItemPublicResponse(
@@ -190,6 +196,7 @@ async def get_public_wishlist(share_token: str, db: AsyncSession = Depends(get_d
             image_url=item.image_url,
             price=item.price,
             is_group_gift=item.is_group_gift,
+            priority=item.priority,
             is_reserved=any(r.is_full_reservation for r in item.reservations),
             contribution_total=total,
             contribution_count=count,
