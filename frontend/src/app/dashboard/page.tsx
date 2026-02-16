@@ -25,6 +25,7 @@ export default function DashboardPage() {
     if (user) {
       api.get("/wishlists").then((res) => {
         setWishlists(res.data);
+      }).catch(() => {}).finally(() => {
         setLoading(false);
       });
     }
