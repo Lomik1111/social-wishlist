@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     cors_origins: str = "http://localhost:3000"
     environment: str = "development"
+    sql_echo: bool = False
 
     class Config:
         env_file = ".env"
