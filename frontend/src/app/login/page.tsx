@@ -107,13 +107,12 @@ export default function LoginPage() {
               Войти
             </button>
 
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-gray-200" />
-              <span className="text-xs text-[var(--color-text-tertiary)]">или</span>
-              <div className="h-px flex-1 bg-gray-200" />
+            <div className="relative py-1">
+              <div className="h-px bg-[var(--color-border)]" />
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-xs text-[var(--color-text-tertiary)]">или</span>
             </div>
 
-            <GoogleAuthButton onCredential={handleGoogleLogin} text="signin_with" />
+            <GoogleAuthButton />
 
             <p className="text-center text-sm text-[var(--color-text-secondary)]">
               Нет аккаунта?{" "}

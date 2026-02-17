@@ -41,4 +41,4 @@ class RefreshRequest(BaseModel):
 
 
 class GoogleAuthRequest(BaseModel):
-    credential: str
+    credential: str = Field(min_length=1)

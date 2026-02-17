@@ -1,82 +1,109 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
 
-type GoogleAuthButtonProps = {
-  onCredential: (credential: string) => Promise<void> | void;
-  text?: "signin_with" | "signup_with" | "continue_with";
-};
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+interface GoogleAuthButtonProps {
+  className?: string;
+}
 
 declare global {
   interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    google?: any;
+    google?: {
+      accounts: {
+        id: {
+          initialize: (options: { client_id: string; callback: (response: { credential?: string }) => void }) => void;
+          renderButton: (parent: HTMLElement, options: Record<string, string>) => void;
+          prompt: () => void;
+        };
+      };
+    };
   }
 }
 
-const SCRIPT_ID = "google-identity-services";
-
-export default function GoogleAuthButton({ onCredential, text = "continue_with" }: GoogleAuthButtonProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+export default function GoogleAuthButton({ className }: GoogleAuthButtonProps) {
+  const [error, setError] = useState("");
+  const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
+  const router = useRouter();
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (!clientId || !containerRef.current) return;
+    if (!GOOGLE_CLIENT_ID) {
+      return;
+    }
 
-    const render = () => {
-      if (!window.google?.accounts?.id || !containerRef.current) return;
+    const initGoogle = () => {
+      if (!window.google?.accounts?.id || !containerRef.current) {
+        return;
+      }
 
-      const width = Math.max(220, Math.min(containerRef.current.clientWidth || 320, 360));
-
+      containerRef.current.innerHTML = "";
       window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: async (response: { credential?: string }) => {
-          if (response.credential) {
-            await onCredential(response.credential);
+        client_id: GOOGLE_CLIENT_ID,
+        callback: async ({ credential }) => {
+          if (!credential) {
+            setError("Google не вернул credential");
+            return;
+          }
+          setError("");
+          try {
+            await loginWithGoogle(credential);
+            router.push("/dashboard");
+          } catch {
+            setError("Не удалось войти через Google");
           }
         },
       });
 
-      containerRef.current.innerHTML = "";
       window.google.accounts.id.renderButton(containerRef.current, {
         type: "standard",
-        theme: "outline",
-        size: "large",
         shape: "pill",
-        width,
-        text,
+        theme: "outline",
+        text: "continue_with",
+        width: "320",
+        size: "large",
       });
     };
 
-    const existingScript = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
-    if (existingScript) {
-      render();
-      window.addEventListener("resize", render);
-      return () => {
-        window.removeEventListener("resize", render);
-      };
+    if (window.google?.accounts?.id) {
+      initGoogle();
+      return;
     }
 
     const script = document.createElement("script");
-    script.id = SCRIPT_ID;
     script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
     script.defer = true;
-    script.onload = render;
+    script.onload = initGoogle;
+    script.onerror = () => setError("Не удалось загрузить Google Sign-In SDK");
     document.head.appendChild(script);
 
-    window.addEventListener("resize", render);
-
     return () => {
-      window.removeEventListener("resize", render);
+      script.onload = null;
+      script.onerror = null;
     };
-  }, [onCredential, text]);
+  }, [loginWithGoogle, router]);
 
-  if (!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) return null;
+  if (!GOOGLE_CLIENT_ID) {
+    return (
+      <div className={`space-y-2 ${className ?? ""}`}>
+        <p className="text-center text-xs text-[var(--color-danger)]">
+          Google OAuth не настроен: отсутствует NEXT_PUBLIC_GOOGLE_CLIENT_ID
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="google-auth-wrapper mx-auto w-full max-w-[360px]">
-      <div ref={containerRef} className="google-auth-button flex justify-center" />
+    <div className={`space-y-2 ${className ?? ""}`}>
+      <div className="flex justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-2">
+        <div ref={containerRef} aria-label="Продолжить с Google" />
+      </div>
+      <p className="text-center text-xs text-[var(--color-text-secondary)]">Продолжить с Google</p>
+      {error && <p className="text-center text-xs text-[var(--color-danger)]">{error}</p>}
     </div>
   );
 }

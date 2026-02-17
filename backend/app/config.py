@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
     google_client_id: str | None = None
     environment: str = "development"
+    google_client_id: str = ""
 
     class Config:
         env_file = ".env"
