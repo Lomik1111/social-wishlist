@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuthStore } from "@/store/authStore";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import { Gift, SpinnerGap, User, EnvelopeSimple, Lock } from "@phosphor-icons/react";
 
 export default function RegisterPage() {
@@ -13,6 +14,7 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const register = useAuthStore((s) => s.register);
+  const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,6 +31,19 @@ export default function RegisterPage() {
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
       setError(msg || "Ошибка регистрации");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleRegister = async (credential: string) => {
+    setError("");
+    setLoading(true);
+    try {
+      await loginWithGoogle(credential);
+      router.push("/dashboard");
+    } catch {
+      setError("Не удалось зарегистрироваться через Google");
     } finally {
       setLoading(false);
     }
@@ -68,7 +83,7 @@ export default function RegisterPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
-                  className="input-premium w-full !pl-12"
+                  className="input-premium input-with-icon w-full"
                   placeholder="Как вас зовут"
                 />
               </div>
@@ -83,7 +98,7 @@ export default function RegisterPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="input-premium w-full !pl-12"
+                  className="input-premium input-with-icon w-full"
                   placeholder="you@example.com"
                 />
               </div>
@@ -99,7 +114,7 @@ export default function RegisterPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={8}
-                  className="input-premium w-full !pl-12"
+                  className="input-premium input-with-icon w-full"
                   placeholder="Минимум 8 символов"
                 />
               </div>
@@ -113,6 +128,14 @@ export default function RegisterPage() {
               {loading && <SpinnerGap size={18} className="animate-spin" />}
               Создать аккаунт
             </button>
+
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-gray-200" />
+              <span className="text-xs text-[var(--color-text-tertiary)]">или</span>
+              <div className="h-px flex-1 bg-gray-200" />
+            </div>
+
+            <GoogleAuthButton onCredential={handleGoogleRegister} text="signup_with" />
 
             <p className="text-center text-sm text-[var(--color-text-secondary)]">
               Уже есть аккаунт?{" "}

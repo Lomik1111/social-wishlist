@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuthStore } from "@/store/authStore";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import { Gift, SpinnerGap, EnvelopeSimple, Lock } from "@phosphor-icons/react";
 
 export default function LoginPage() {
@@ -12,6 +13,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const login = useAuthStore((s) => s.login);
+  const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,6 +25,19 @@ export default function LoginPage() {
       router.push("/dashboard");
     } catch {
       setError("Неверный email или пароль");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async (credential: string) => {
+    setError("");
+    setLoading(true);
+    try {
+      await loginWithGoogle(credential);
+      router.push("/dashboard");
+    } catch {
+      setError("Не удалось войти через Google");
     } finally {
       setLoading(false);
     }
@@ -62,7 +77,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="input-premium w-full !pl-12"
+                  className="input-premium input-with-icon w-full"
                   placeholder="you@example.com"
                 />
               </div>
@@ -77,7 +92,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="input-premium w-full !pl-12"
+                  className="input-premium input-with-icon w-full"
                   placeholder="Минимум 8 символов"
                 />
               </div>
@@ -91,6 +106,14 @@ export default function LoginPage() {
               {loading && <SpinnerGap size={18} className="animate-spin" />}
               Войти
             </button>
+
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-gray-200" />
+              <span className="text-xs text-[var(--color-text-tertiary)]">или</span>
+              <div className="h-px flex-1 bg-gray-200" />
+            </div>
+
+            <GoogleAuthButton onCredential={handleGoogleLogin} text="signin_with" />
 
             <p className="text-center text-sm text-[var(--color-text-secondary)]">
               Нет аккаунта?{" "}

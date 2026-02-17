@@ -308,6 +308,8 @@ html { scroll-behavior: smooth; }
   transition: all 0.25s var(--ease-smooth);
   background: rgba(255, 255, 255, 0.8);
   color: var(--color-text-primary);
+  appearance: none;
+  -webkit-appearance: none;
 }
 .input-premium::placeholder { color: var(--color-text-tertiary); }
 .input-premium:hover { border-color: rgba(162, 155, 254, 0.4); }
@@ -315,6 +317,25 @@ html { scroll-behavior: smooth; }
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
   background: white;
+}
+
+.input-with-icon {
+  padding-left: 2.75rem;
+}
+
+.google-auth-wrapper {
+  min-height: 44px;
+}
+
+/* Hide built-in browser field icons that visually overlap custom icons */
+input.input-premium::-ms-reveal,
+input.input-premium::-ms-clear,
+input.input-premium::-webkit-credentials-auto-fill-button,
+input.input-premium::-webkit-contacts-auto-fill-button,
+input.input-premium::-webkit-caps-lock-indicator {
+  display: none;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* ===== BLOBS ===== */
@@ -594,6 +615,14 @@ html { scroll-behavior: smooth; }
 /* ===== RESPONSIVE ===== */
 
 @media (max-width: 640px) {
+  .input-with-icon {
+    padding-left: 2.5rem;
+  }
+
+  .google-auth-wrapper {
+    max-width: 100%;
+  }
+
   .btn-primary,
   .btn-secondary,
   .btn-coral {
