@@ -19,6 +19,15 @@ class UserLogin(BaseModel):
     password: str
 
 
+
+
+class GoogleAuthRequest(BaseModel):
+    email: EmailStr
+    oauth_id: str = Field(min_length=1, max_length=255)
+    full_name: str | None = Field(default=None, max_length=255)
+    avatar_url: str | None = Field(default=None, max_length=500)
+
+
 class UserResponse(BaseModel):
     id: UUID
     email: str
