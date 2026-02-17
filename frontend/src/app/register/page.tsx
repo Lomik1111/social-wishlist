@@ -14,6 +14,7 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const register = useAuthStore((s) => s.register);
+  const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,6 +31,19 @@ export default function RegisterPage() {
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
       setError(msg || "Ошибка регистрации");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleRegister = async (credential: string) => {
+    setError("");
+    setLoading(true);
+    try {
+      await loginWithGoogle(credential);
+      router.push("/dashboard");
+    } catch {
+      setError("Не удалось зарегистрироваться через Google");
     } finally {
       setLoading(false);
     }
@@ -69,7 +83,7 @@ export default function RegisterPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
-                  className="input-premium w-full !pl-12"
+                  className="input-premium input-with-icon w-full"
                   placeholder="Как вас зовут"
                 />
               </div>
@@ -84,7 +98,7 @@ export default function RegisterPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="input-premium w-full !pl-12"
+                  className="input-premium input-with-icon w-full"
                   placeholder="you@example.com"
                 />
               </div>
@@ -100,7 +114,7 @@ export default function RegisterPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={8}
-                  className="input-premium w-full !pl-12"
+                  className="input-premium input-with-icon w-full"
                   placeholder="Минимум 8 символов"
                 />
               </div>

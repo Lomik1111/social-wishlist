@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import dynamic from "next/dynamic";
 import {
   Gift,
@@ -143,19 +142,8 @@ export default function Home() {
           {/* 3D Gift illustration */}
           <AnimatedSection delay={0.4} direction="none">
             <div className="mx-auto mt-14">
-              {/* Desktop: 3D WebGL scene */}
-              <div className="hidden md:block mx-auto w-[280px] h-[280px]">
+              <div className="mx-auto h-[220px] w-[220px] md:h-[280px] md:w-[280px]">
                 <HeroGiftScene />
-              </div>
-              {/* Mobile: Static SVG with CSS float animation */}
-              <div className="block md:hidden mx-auto w-[200px] animate-float">
-                <Image
-                  src="/illustrations/gift.svg"
-                  alt="Подарок"
-                  width={200}
-                  height={200}
-                  priority
-                />
               </div>
             </div>
           </AnimatedSection>

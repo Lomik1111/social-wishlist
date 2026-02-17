@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
     algorithm: str = "HS256"
     cors_origins: str = "http://localhost:3000"
+    google_client_id: str | None = None
     environment: str = "development"
     google_client_id: str = ""
 

@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const login = useAuthStore((s) => s.login);
+  const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,6 +25,19 @@ export default function LoginPage() {
       router.push("/dashboard");
     } catch {
       setError("Неверный email или пароль");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async (credential: string) => {
+    setError("");
+    setLoading(true);
+    try {
+      await loginWithGoogle(credential);
+      router.push("/dashboard");
+    } catch {
+      setError("Не удалось войти через Google");
     } finally {
       setLoading(false);
     }
@@ -63,7 +77,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="input-premium w-full !pl-12"
+                  className="input-premium input-with-icon w-full"
                   placeholder="you@example.com"
                 />
               </div>
@@ -78,7 +92,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="input-premium w-full !pl-12"
+                  className="input-premium input-with-icon w-full"
                   placeholder="Минимум 8 символов"
                 />
               </div>

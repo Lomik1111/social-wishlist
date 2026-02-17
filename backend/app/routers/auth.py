@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -134,17 +135,7 @@ async def register(data: UserRegister, db: AsyncSession = Depends(get_db)):
     db.add(user)
     await db.flush()
 
-    access = create_access_token(user.id)
-    refresh = create_refresh_token(user.id)
-
-    rt = RefreshToken(
-        user_id=user.id,
-        token_hash=hash_token(refresh),
-        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days),
-    )
-    db.add(rt)
-
-    return TokenResponse(access_token=access, refresh_token=refresh, user=UserResponse.model_validate(user))
+    return _issue_tokens(db, user)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -154,6 +145,56 @@ async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    return _issue_tokens(db, user)
+
+
+@router.post("/google", response_model=TokenResponse)
+async def google_auth(data: GoogleAuthRequest, db: AsyncSession = Depends(get_db)):
+    if not settings.google_client_id:
+        raise HTTPException(status_code=503, detail="Google auth is not configured")
+
+    try:
+        payload = id_token.verify_oauth2_token(
+            data.credential,
+            requests.Request(),
+            settings.google_client_id,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail="Invalid Google credential") from exc
+
+    email = payload.get("email")
+    sub = payload.get("sub")
+    email_verified = payload.get("email_verified")
+    if not email or not sub:
+        raise HTTPException(status_code=401, detail="Google profile is incomplete")
+    if email_verified is False:
+        raise HTTPException(status_code=401, detail="Google email is not verified")
+
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        user = User(
+            email=email,
+            full_name=payload.get("name"),
+            avatar_url=payload.get("picture"),
+            oauth_provider="google",
+            oauth_id=sub,
+            password_hash=hash_password(secrets.token_urlsafe(32)),
+        )
+        db.add(user)
+        await db.flush()
+    else:
+        user.oauth_provider = "google"
+        user.oauth_id = sub
+        user.avatar_url = user.avatar_url or payload.get("picture")
+        if not user.full_name:
+            user.full_name = payload.get("name")
+
+    return _issue_tokens(db, user)
+
+
+def _issue_tokens(db: AsyncSession, user: User) -> TokenResponse:
     access = create_access_token(user.id)
     refresh = create_refresh_token(user.id)
 
