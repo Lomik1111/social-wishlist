@@ -1,11 +1,32 @@
+import importlib.util
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.config import get_settings
 from app.routers import auth, wishlists, items, reservations, contributions, autofill, websocket
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Social Wishlist API", version="1.0.0")
+
+
+@app.on_event("startup")
+async def startup_preflight() -> None:
+    google_client_id_configured = bool(settings.google_client_id)
+    oauth_modules = {
+        "google.oauth2.id_token": importlib.util.find_spec("google.oauth2.id_token") is not None,
+        "google.auth.transport.requests": importlib.util.find_spec("google.auth.transport.requests") is not None,
+        "requests": importlib.util.find_spec("requests") is not None,
+    }
+    logger.info(
+        "Auth preflight: google_client_id_configured=%s oauth_modules=%s",
+        google_client_id_configured,
+        oauth_modules,
+    )
+
 
 app.add_middleware(
     CORSMiddleware,
