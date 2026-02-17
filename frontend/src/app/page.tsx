@@ -21,15 +21,7 @@ const HeroGiftScene = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex items-center justify-center w-full h-full animate-float">
-        <Image
-          src="/illustrations/gift.svg"
-          alt="Подарок"
-          width={220}
-          height={220}
-          priority
-        />
-      </div>
+      <div className="w-full h-full" />
     ),
   }
 );

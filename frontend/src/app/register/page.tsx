@@ -62,13 +62,13 @@ export default function RegisterPage() {
             <div>
               <label className="mb-1.5 block text-sm font-medium text-[var(--color-text-primary)]">Имя</label>
               <div className="relative">
-                <User size={18} weight="duotone" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]" />
+                <User size={18} weight="duotone" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none" />
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
-                  className="input-premium w-full pl-11"
+                  className="input-premium w-full !pl-12"
                   placeholder="Как вас зовут"
                 />
               </div>
@@ -77,13 +77,13 @@ export default function RegisterPage() {
             <div>
               <label className="mb-1.5 block text-sm font-medium text-[var(--color-text-primary)]">Email</label>
               <div className="relative">
-                <EnvelopeSimple size={18} weight="duotone" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]" />
+                <EnvelopeSimple size={18} weight="duotone" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="input-premium w-full pl-11"
+                  className="input-premium w-full !pl-12"
                   placeholder="you@example.com"
                 />
               </div>
@@ -92,14 +92,14 @@ export default function RegisterPage() {
             <div>
               <label className="mb-1.5 block text-sm font-medium text-[var(--color-text-primary)]">Пароль</label>
               <div className="relative">
-                <Lock size={18} weight="duotone" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]" />
+                <Lock size={18} weight="duotone" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none" />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={8}
-                  className="input-premium w-full pl-11"
+                  className="input-premium w-full !pl-12"
                   placeholder="Минимум 8 символов"
                 />
               </div>
