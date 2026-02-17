@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuthStore } from "@/store/authStore";
-import { Gift, SpinnerGap } from "@phosphor-icons/react";
+import { Gift, SpinnerGap, EnvelopeSimple, Lock } from "@phosphor-icons/react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -34,11 +34,11 @@ export default function LoginPage() {
       <div className="blob blob-purple w-96 h-96 absolute -top-20 -right-20 -z-10" />
       <div className="blob blob-coral w-80 h-80 absolute -bottom-20 -left-20 -z-10" />
 
-      <div className="w-full max-w-5xl mx-auto grid md:grid-cols-2 gap-0 overflow-hidden rounded-3xl shadow-2xl">
+      <div className="w-full max-w-5xl mx-auto grid md:grid-cols-2 gap-0 overflow-hidden rounded-3xl shadow-2xl border border-[rgba(162,155,254,0.15)]">
         {/* LEFT — Form */}
         <div className="bg-white p-8 md:p-12">
           <div className="mb-8 flex flex-col items-start gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-light)]">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-light)] shadow-lg">
               <Gift size={28} weight="duotone" className="text-white" />
             </div>
             <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">С возвращением!</h1>
@@ -55,26 +55,32 @@ export default function LoginPage() {
 
             <div>
               <label className="mb-1.5 block text-sm font-medium text-[var(--color-text-primary)]">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="input-premium w-full"
-                placeholder="you@example.com"
-              />
+              <div className="relative">
+                <EnvelopeSimple size={18} weight="duotone" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="input-premium w-full pl-11"
+                  placeholder="you@example.com"
+                />
+              </div>
             </div>
 
             <div>
               <label className="mb-1.5 block text-sm font-medium text-[var(--color-text-primary)]">Пароль</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="input-premium w-full"
-                placeholder="Минимум 8 символов"
-              />
+              <div className="relative">
+                <Lock size={18} weight="duotone" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="input-premium w-full pl-11"
+                  placeholder="Минимум 8 символов"
+                />
+              </div>
             </div>
 
             <button
@@ -108,16 +114,16 @@ export default function LoginPage() {
             <Image
               src="/illustrations/share.svg"
               alt="Поделитесь желаниями"
-              width={200}
-              height={150}
-              className="opacity-90"
+              width={220}
+              height={165}
+              className="drop-shadow-lg"
             />
           </div>
 
           <h2 className="text-2xl font-bold text-white text-center mb-3 relative z-10">
             Делитесь желаниями, получайте подарки мечты
           </h2>
-          <p className="text-white/70 text-center text-sm relative z-10">
+          <p className="text-white/80 text-center text-sm relative z-10 max-w-xs">
             Создайте вишлист и отправьте ссылку друзьям
           </p>
         </div>
