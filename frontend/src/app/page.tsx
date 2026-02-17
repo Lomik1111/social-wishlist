@@ -14,7 +14,7 @@ import {
 import AnimatedSection from "@/components/landing/AnimatedSection";
 import type { ComponentType } from "react";
 
-/* -------- Dynamic 3D scene imports (SSR disabled) -------- */
+/* -------- Dynamic 3D scene import (SSR disabled) — hero only -------- */
 
 const HeroGiftScene = dynamic(
   () => import("@/components/three/HeroGiftScene"),
@@ -34,21 +34,6 @@ const HeroGiftScene = dynamic(
   }
 );
 
-const FeatureShareScene = dynamic(
-  () => import("@/components/three/FeatureShareScene"),
-  { ssr: false }
-);
-
-const FeatureUsersScene = dynamic(
-  () => import("@/components/three/FeatureUsersScene"),
-  { ssr: false }
-);
-
-const FeatureConfettiScene = dynamic(
-  () => import("@/components/three/FeatureConfettiScene"),
-  { ssr: false }
-);
-
 /* -------- Data -------- */
 
 interface FeatureData {
@@ -56,9 +41,7 @@ interface FeatureData {
   icon: ComponentType<any>;
   title: string;
   description: string;
-  iconColor: string;
-  iconBg: string;
-  ThreeScene: ComponentType | null;
+  gradientBg: string;
 }
 
 const features: FeatureData[] = [
@@ -67,36 +50,28 @@ const features: FeatureData[] = [
     title: "Создавайте списки",
     description:
       "Добавляйте подарки с фото, ценой и ссылкой. Автозаполнение подтянет всё за вас",
-    iconColor: "text-[var(--color-primary)]",
-    iconBg: "bg-[rgba(108,92,231,0.12)]",
-    ThreeScene: null, // Gift already in hero as 3D
+    gradientBg: "bg-gradient-to-br from-[#6C5CE7] to-[#A29BFE]",
   },
   {
     icon: LinkIcon,
     title: "Делитесь одной ссылкой",
     description:
       "Без регистрации и скачивания. Друзья откроют ваш вишлист прямо в браузере",
-    iconColor: "text-[var(--color-accent-coral)]",
-    iconBg: "bg-[rgba(253,121,168,0.12)]",
-    ThreeScene: FeatureShareScene,
+    gradientBg: "bg-gradient-to-br from-[#FD79A8] to-[#FDCB6E]",
   },
   {
     icon: UsersThree,
     title: "Скидывайтесь вместе",
     description:
       "Дорогой подарок? Друзья увидят прогресс-бар и смогут внести любую сумму",
-    iconColor: "text-[var(--color-success)]",
-    iconBg: "bg-[rgba(0,184,148,0.12)]",
-    ThreeScene: FeatureUsersScene,
+    gradientBg: "bg-gradient-to-br from-[#00B894] to-[#55EFC4]",
   },
   {
     icon: Confetti,
     title: "Сохраняйте сюрприз",
     description:
       "Владелец не видит кто и что зарезервировал. Сюрприз останется сюрпризом",
-    iconColor: "text-[var(--color-accent-gold)]",
-    iconBg: "bg-[rgba(253,203,110,0.15)]",
-    ThreeScene: FeatureConfettiScene,
+    gradientBg: "bg-gradient-to-br from-[#FDCB6E] to-[#FD79A8]",
   },
 ];
 
@@ -206,37 +181,17 @@ export default function Home() {
         <div className="mx-auto mt-12 grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-2">
           {features.map((f, i) => {
             const Icon = f.icon;
-            const ThreeScene = f.ThreeScene;
             return (
               <AnimatedSection key={f.title} delay={0.1 * i} direction="up">
                 <div className="card-premium p-8">
                   <div
-                    className={`mb-4 flex items-center justify-center rounded-2xl ${f.iconBg} ${
-                      ThreeScene ? "h-20 w-20" : "h-12 w-12"
-                    }`}
+                    className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${f.gradientBg} shadow-lg`}
                   >
-                    {ThreeScene ? (
-                      <>
-                        {/* Desktop: 3D icon */}
-                        <div className="hidden md:block w-full h-full">
-                          <ThreeScene />
-                        </div>
-                        {/* Mobile: 2D Phosphor icon */}
-                        <div className="block md:hidden">
-                          <Icon
-                            size={26}
-                            weight="duotone"
-                            className={f.iconColor}
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <Icon
-                        size={26}
-                        weight="duotone"
-                        className={f.iconColor}
-                      />
-                    )}
+                    <Icon
+                      size={28}
+                      weight="duotone"
+                      className="text-white"
+                    />
                   </div>
                   <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
                     {f.title}
