@@ -2,7 +2,7 @@
 
 import { useRef, useState, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
-import { RoundedBox, Cylinder, Sphere, Octahedron } from "@react-three/drei";
+import { RoundedBox, Sphere, Octahedron } from "@react-three/drei";
 import type { Group } from "three";
 import SceneCanvas from "./SceneCanvas";
 
@@ -85,9 +85,8 @@ function BowLoop({
 const BOX_W = 1.7;
 const BOX_H = 1.2;
 const BOX_D = 1.7;
-const LID_H = 0.2;
+const LID_H = 0.24;
 const LID_OVER = 0.06; // overhang on each side
-const RIBBON_T = 0.025; // ribbon thickness (very thin)
 const RIBBON_W = 0.18; // ribbon width
 
 function GiftBox() {
@@ -115,7 +114,7 @@ function GiftBox() {
   const lidW = BOX_W + LID_OVER * 2;
   const lidD = BOX_D + LID_OVER * 2;
   const lidY = BOX_H / 2 + LID_H / 2 + 0.015;
-  const bowY = lidY + LID_H / 2 + 0.12;
+  const bowY = lidY + LID_H / 2 + 0.1;
 
   return (
     <group
@@ -203,21 +202,25 @@ function GiftBox() {
           roughness={0.3}
         />
       </Sphere>
-      {/* Ribbon tails (two small hanging cylinders) */}
-      <Cylinder
-        args={[0.03, 0.015, 0.25, 8]}
-        position={[-0.08, bowY - 0.18, 0.03]}
-        rotation={[0.1, 0, 0.2]}
+      {/* Ribbon tails */}
+      <RoundedBox
+        args={[0.07, 0.22, 0.025]}
+        radius={0.01}
+        smoothness={2}
+        position={[-0.09, bowY - 0.18, 0.025]}
+        rotation={[0, 0, 0.26]}
       >
         <meshStandardMaterial color={bowColor} metalness={0.15} roughness={0.3} />
-      </Cylinder>
-      <Cylinder
-        args={[0.03, 0.015, 0.22, 8]}
-        position={[0.08, bowY - 0.16, -0.02]}
-        rotation={[-0.1, 0, -0.25]}
+      </RoundedBox>
+      <RoundedBox
+        args={[0.07, 0.2, 0.025]}
+        radius={0.01}
+        smoothness={2}
+        position={[0.09, bowY - 0.16, -0.025]}
+        rotation={[0, 0, -0.23]}
       >
         <meshStandardMaterial color={bowColor} metalness={0.15} roughness={0.3} />
-      </Cylinder>
+      </RoundedBox>
 
       {/* ===== Orbiting sparkles ===== */}
       {sparkles.map((s, i) => (

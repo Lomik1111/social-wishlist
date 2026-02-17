@@ -90,11 +90,28 @@ export default function WishlistDetailPage() {
     try {
       const res = await api.post<AutoFillResult>("/autofill", { url: itemUrl });
       if (res.data.success) {
-        if (res.data.title) setItemName(res.data.title);
-        if (res.data.image_url) setItemImageUrl(res.data.image_url);
-        if (res.data.price) setItemPrice(String(res.data.price));
-        if (res.data.description) setItemDescription(res.data.description);
-        toast.success("Данные заполнены автоматически");
+        let filled = 0;
+        if (res.data.title && !itemName.trim()) {
+          setItemName(res.data.title);
+          filled += 1;
+        }
+        if (res.data.image_url && !itemImageUrl.trim()) {
+          setItemImageUrl(res.data.image_url);
+          filled += 1;
+        }
+        if (typeof res.data.price === "number" && !itemPrice.trim()) {
+          setItemPrice(String(res.data.price));
+          filled += 1;
+        }
+        if (res.data.description && !itemDescription.trim()) {
+          setItemDescription(res.data.description);
+          filled += 1;
+        }
+        toast.success(
+          filled > 0
+            ? `Автозаполнение добавило ${filled} ${filled === 1 ? "поле" : "поля"}`
+            : "Автозаполнение не перезаписало уже заполненные поля",
+        );
       } else {
         toast.error("Не удалось извлечь данные со страницы");
       }
@@ -318,7 +335,7 @@ export default function WishlistDetailPage() {
                   value={itemUrl}
                   onChange={(e) => setItemUrl(e.target.value)}
                   placeholder="https://example.com/product"
-                  className="input-premium w-full pl-10"
+                  className="input-premium input-with-icon w-full"
                 />
               </div>
               <button
@@ -392,7 +409,7 @@ export default function WishlistDetailPage() {
                     value={itemImageUrl}
                     onChange={(e) => setItemImageUrl(e.target.value)}
                     placeholder="https://example.com/image.jpg"
-                    className="input-premium w-full pl-10"
+                    className="input-premium input-with-icon w-full"
                   />
                 </div>
                 {itemImageUrl && (
