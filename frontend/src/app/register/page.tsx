@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuthStore } from "@/store/authStore";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import { Gift, SpinnerGap, User, EnvelopeSimple, Lock } from "@phosphor-icons/react";
 
 export default function RegisterPage() {
@@ -113,6 +114,13 @@ export default function RegisterPage() {
               {loading && <SpinnerGap size={18} className="animate-spin" />}
               Создать аккаунт
             </button>
+
+            <div className="relative py-1">
+              <div className="h-px bg-[var(--color-border)]" />
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-xs text-[var(--color-text-tertiary)]">или</span>
+            </div>
+
+            <GoogleAuthButton />
 
             <p className="text-center text-sm text-[var(--color-text-secondary)]">
               Уже есть аккаунт?{" "}
