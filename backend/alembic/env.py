@@ -2,11 +2,14 @@ import ssl
 import sys
 import os
 import asyncio
+import logging
 from logging.config import fileConfig
 from sqlalchemy import pool
 import logging
 from sqlalchemy.ext.asyncio import async_engine_from_config, create_async_engine
 from alembic import context
+
+logger = logging.getLogger("alembic.env")
 
 # Ensure app module is importable
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
