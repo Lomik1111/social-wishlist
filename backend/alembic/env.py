@@ -2,6 +2,7 @@ import sys
 import os
 import asyncio
 import logging
+from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
 from logging.config import fileConfig
 from sqlalchemy import pool
 import logging
@@ -9,6 +10,8 @@ from sqlalchemy.ext.asyncio import async_engine_from_config, create_async_engine
 from alembic import context
 
 logger = logging.getLogger("alembic.env")
+
+IS_RAILWAY = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_SERVICE_NAME"))
 
 # Ensure app module is importable
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -23,6 +26,14 @@ if database_url.startswith("postgresql://"):
     database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 elif database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql+asyncpg://", 1)
+
+# Strip sslmode from URL on Railway — the proxy rejects SSL upgrades
+if IS_RAILWAY:
+    _parsed = urlparse(database_url)
+    _qs = parse_qs(_parsed.query)
+    _qs.pop("sslmode", None)
+    database_url = urlunparse(_parsed._replace(query=urlencode(_qs, doseq=True)))
+
 config.set_main_option("sqlalchemy.url", database_url)
 
 from app.database import Base
@@ -50,11 +61,15 @@ MAX_RETRIES = 5
 
 
 async def run_async_migrations():
-    # Railway: disable SSL for both internal and proxy connections.
-    # The proxy (.proxy.rlwy.net) rejects SSL upgrades with ConnectionResetError.
+    # Railway proxy does not support SSL at the PostgreSQL protocol level
     connect_args = {}
-    if any(h in database_url for h in (".railway.internal", ".proxy.rlwy.net", ".railway.app")):
+    if IS_RAILWAY:
         connect_args["ssl"] = False
+        logger.info("Railway detected, SSL disabled")
+
+    _parsed_host = urlparse(database_url).hostname or "unknown"
+    logger.info("Connecting to DB host: %s (railway=%s, ssl=%s)",
+                _parsed_host, IS_RAILWAY, connect_args.get("ssl", "default"))
 
     # Use create_async_engine directly so connect_args (including ssl=False) are
     # passed straight to asyncpg without going through the alembic.ini config layer,
