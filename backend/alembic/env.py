@@ -2,10 +2,13 @@ import ssl
 import sys
 import os
 import asyncio
+import logging
 from logging.config import fileConfig
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
+
+logger = logging.getLogger("alembic.env")
 
 # Ensure app module is importable
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -58,8 +61,25 @@ async def run_async_migrations():
         poolclass=pool.NullPool,
         connect_args=connect_args,
     )
-    async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
+
+    # Retry logic for Railway proxy cold-start connection resets
+    max_retries = 5
+    for attempt in range(1, max_retries + 1):
+        try:
+            async with connectable.connect() as connection:
+                await connection.run_sync(do_run_migrations)
+            break
+        except Exception as e:
+            if attempt == max_retries:
+                logger.error("Failed to connect after %d attempts: %s", max_retries, e)
+                raise
+            wait = 2 ** attempt  # 2, 4, 8, 16, 32 seconds
+            logger.warning(
+                "DB connection attempt %d/%d failed (%s), retrying in %ds...",
+                attempt, max_retries, e, wait,
+            )
+            await asyncio.sleep(wait)
+
     await connectable.dispose()
 
 
