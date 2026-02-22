@@ -1,3 +1,4 @@
+import ssl
 import sys
 import os
 import asyncio
@@ -41,10 +42,15 @@ def do_run_migrations(connection):
 
 
 async def run_async_migrations():
-    # Disable SSL for Railway internal network
+    # Railway SSL handling
     connect_args = {}
     if ".railway.internal" in database_url:
         connect_args["ssl"] = False
+    elif ".proxy.rlwy.net" in database_url or ".railway.app" in database_url:
+        ssl_ctx = ssl.create_default_context()
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = ssl.CERT_NONE
+        connect_args["ssl"] = ssl_ctx
 
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),

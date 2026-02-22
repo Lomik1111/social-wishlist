@@ -11,10 +11,15 @@ if _db_url.startswith("postgresql://"):
 elif _db_url.startswith("postgres://"):
     _db_url = _db_url.replace("postgres://", "postgresql+asyncpg://", 1)
 
-# Railway internal network doesn't support SSL
+# Railway SSL handling
 _connect_args: dict = {}
 if ".railway.internal" in _db_url:
     _connect_args["ssl"] = False
+elif ".proxy.rlwy.net" in _db_url or ".railway.app" in _db_url:
+    _ssl_ctx = _ssl.create_default_context()
+    _ssl_ctx.check_hostname = False
+    _ssl_ctx.verify_mode = _ssl.CERT_NONE
+    _connect_args["ssl"] = _ssl_ctx
 
 engine = create_async_engine(_db_url, echo=False, connect_args=_connect_args)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
