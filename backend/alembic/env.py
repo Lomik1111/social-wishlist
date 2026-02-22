@@ -1,4 +1,3 @@
-import ssl
 import sys
 import os
 import asyncio
@@ -51,15 +50,11 @@ MAX_RETRIES = 5
 
 
 async def run_async_migrations():
-    # Railway SSL handling
+    # Railway: disable SSL for both internal and proxy connections.
+    # The proxy (.proxy.rlwy.net) rejects SSL upgrades with ConnectionResetError.
     connect_args = {}
-    if ".railway.internal" in database_url:
+    if any(h in database_url for h in (".railway.internal", ".proxy.rlwy.net", ".railway.app")):
         connect_args["ssl"] = False
-    elif ".proxy.rlwy.net" in database_url or ".railway.app" in database_url:
-        ssl_ctx = ssl.create_default_context()
-        ssl_ctx.check_hostname = False
-        ssl_ctx.verify_mode = ssl.CERT_NONE
-        connect_args["ssl"] = ssl_ctx
 
     # Use create_async_engine directly so connect_args (including ssl=False) are
     # passed straight to asyncpg without going through the alembic.ini config layer,
