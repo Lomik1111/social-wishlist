@@ -1,5 +1,4 @@
 import os
-import ssl as _ssl_mod
 from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
@@ -7,29 +6,23 @@ from app.config import get_settings
 
 settings = get_settings()
 
-_IS_RAILWAY = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_SERVICE_NAME"))
-
-_db_url = settings.database_url
+# On Railway, prefer the private URL (*.railway.internal) over the public
+# proxy (*.proxy.rlwy.net). The public proxy is unreliable for service-to-service
+# connections within Railway. The private network needs no SSL.
+_db_url = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL") or settings.database_url
 if _db_url.startswith("postgresql://"):
     _db_url = _db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 elif _db_url.startswith("postgres://"):
     _db_url = _db_url.replace("postgres://", "postgresql+asyncpg://", 1)
 
+# Strip sslmode from URL and disable SSL for internal Railway connections
 _connect_args: dict = {}
-if _IS_RAILWAY:
-    # Railway public proxy (*.proxy.rlwy.net) expects direct TLS, not PostgreSQL
-    # SSLRequest negotiation. Use direct_tls=True so asyncpg wraps the socket in
-    # TLS immediately. Strip sslmode from URL to prevent asyncpg from also trying
-    # PostgreSQL-level SSL negotiation.
-    _parsed = urlparse(_db_url)
-    _qs = parse_qs(_parsed.query)
-    _qs.pop("sslmode", None)
+_parsed = urlparse(_db_url)
+_qs = parse_qs(_parsed.query)
+if _qs.pop("sslmode", None):
     _db_url = urlunparse(_parsed._replace(query=urlencode(_qs, doseq=True)))
-    _ssl_ctx = _ssl_mod.create_default_context()
-    _ssl_ctx.check_hostname = False
-    _ssl_ctx.verify_mode = _ssl_mod.CERT_NONE
-    _connect_args["ssl"] = _ssl_ctx
-    _connect_args["direct_tls"] = True
+if ".railway.internal" in _db_url:
+    _connect_args["ssl"] = False
 
 engine = create_async_engine(
     _db_url,

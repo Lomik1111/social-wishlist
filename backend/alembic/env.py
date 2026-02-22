@@ -1,4 +1,3 @@
-import ssl
 import sys
 import os
 import asyncio
@@ -12,8 +11,6 @@ from alembic import context
 
 logger = logging.getLogger("alembic.env")
 
-IS_RAILWAY = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_SERVICE_NAME"))
-
 # Ensure app module is importable
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -21,18 +18,21 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Override sqlalchemy.url from environment variable
-database_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://wishlist:wishlist_dev@localhost:5432/wishlist")
+# On Railway, prefer private URL (*.railway.internal) over public proxy
+database_url = (
+    os.getenv("DATABASE_PRIVATE_URL")
+    or os.getenv("DATABASE_URL")
+    or "postgresql+asyncpg://wishlist:wishlist_dev@localhost:5432/wishlist"
+)
 if database_url.startswith("postgresql://"):
     database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 elif database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql+asyncpg://", 1)
 
-# Strip sslmode from URL on Railway — the proxy rejects SSL upgrades
-if IS_RAILWAY:
-    _parsed = urlparse(database_url)
-    _qs = parse_qs(_parsed.query)
-    _qs.pop("sslmode", None)
+# Strip sslmode from URL — asyncpg parses it and may force unwanted SSL
+_parsed = urlparse(database_url)
+_qs = parse_qs(_parsed.query)
+if _qs.pop("sslmode", None):
     database_url = urlunparse(_parsed._replace(query=urlencode(_qs, doseq=True)))
 
 config.set_main_option("sqlalchemy.url", database_url)
@@ -62,19 +62,12 @@ MAX_RETRIES = 5
 
 
 async def run_async_migrations():
-    # Railway public proxy expects direct TLS (not PostgreSQL SSLRequest negotiation)
     connect_args = {}
-    if IS_RAILWAY:
-        ssl_ctx = ssl.create_default_context()
-        ssl_ctx.check_hostname = False
-        ssl_ctx.verify_mode = ssl.CERT_NONE
-        connect_args["ssl"] = ssl_ctx
-        connect_args["direct_tls"] = True
-        logger.info("Railway detected, using direct TLS")
+    if ".railway.internal" in database_url:
+        connect_args["ssl"] = False
 
     _parsed_host = urlparse(database_url).hostname or "unknown"
-    logger.info("Connecting to DB host: %s (railway=%s, direct_tls=%s)",
-                _parsed_host, IS_RAILWAY, connect_args.get("direct_tls", False))
+    logger.info("Connecting to DB host: %s (ssl=%s)", _parsed_host, connect_args.get("ssl", "default"))
 
     # Use create_async_engine directly so connect_args (including ssl=False) are
     # passed straight to asyncpg without going through the alembic.ini config layer,
