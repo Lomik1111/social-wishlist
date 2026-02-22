@@ -1,5 +1,19 @@
+"""
+Product page metadata scraper with multi-layer extraction.
+
+Priority of parsing methods (best to worst):
+1. JSON-LD markup (schema.org Product)            — _score=100
+2. Microdata (itemtype Product)                    — _score=90
+3. Site-specific parsers (Ozon, WB, DNS, etc.)     — _score=80
+4. Open Graph + Twitter Card meta tags             — _score=70
+5. <script> state objects (__NEXT_DATA__, etc.)     — _score=60
+6. CSS selector / attribute heuristics             — _score=50
+"""
+
+import asyncio
 import ipaddress
 import json
+import logging
 import re
 import socket
 from dataclasses import dataclass
@@ -9,27 +23,34 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from bs4 import BeautifulSoup, Tag
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/131.0.0.0 Safari/537.36"
-    ),
-    "Accept": (
-        "text/html,application/xhtml+xml,application/xml;"
-        "q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
-    ),
-    "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
-}
+logger = logging.getLogger(__name__)
 
-_EMPTY_RESULT: dict = {
-    "title": None,
-    "description": None,
-    "image_url": None,
-    "price": None,
-    "success": False,
-    "error_message": None,
-}
+# ---------------------------------------------------------------------------
+# User-Agent rotation pool
+# ---------------------------------------------------------------------------
+
+USER_AGENTS = [
+    # iPhone Safari
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    # macOS Chrome
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    # Windows Chrome
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    # Windows Edge
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
+    # Android Chrome
+    "Mozilla/5.0 (Linux; Android 14; Pixel 8) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+]
+
+_ACCEPT_HEADER = (
+    "text/html,application/xhtml+xml,application/xml;"
+    "q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
+)
 
 _IMAGE_ATTRS = [
     "src",
@@ -50,6 +71,82 @@ _PREFER_IMAGE_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
+# Minimum image dimension — images smaller than this are likely icons/spacers
+_MIN_IMAGE_PX = 100
+
+# ---------------------------------------------------------------------------
+# Currency detection
+# ---------------------------------------------------------------------------
+
+_CURRENCY_MAP: list[tuple[re.Pattern, str]] = [
+    (re.compile(r"₽|руб\.?|rub\b|rur\b", re.IGNORECASE), "RUB"),
+    (re.compile(r"\$|usd\b|dollar", re.IGNORECASE), "USD"),
+    (re.compile(r"€|eur\b|euro", re.IGNORECASE), "EUR"),
+    (re.compile(r"₴|грн\.?|uah\b", re.IGNORECASE), "UAH"),
+    (re.compile(r"₸|тенге|kzt\b", re.IGNORECASE), "KZT"),
+]
+
+# Domains that almost certainly use RUB
+_RUB_DOMAINS = {
+    "ozon.ru", "wildberries.ru", "dns-shop.ru", "mvideo.ru",
+    "lamoda.ru", "eldorado.ru", "citilink.ru", "sbermegamarket.ru",
+    "market.yandex.ru", "aliexpress.ru",
+}
+
+
+def _detect_currency(text: str, domain: str = "") -> str:
+    """Detect currency from price-surrounding text.  Falls back to RUB."""
+    for pattern, code in _CURRENCY_MAP:
+        if pattern.search(text):
+            return code
+    bare_domain = domain.lower().replace("www.", "")
+    for d in _RUB_DOMAINS:
+        if bare_domain.endswith(d):
+            return "RUB"
+    return "RUB"
+
+
+def _detect_currency_from_jsonld(offer: dict, domain: str = "") -> str:
+    """Extract ISO currency code from JSON-LD offer or fall back."""
+    code = offer.get("priceCurrency") or ""
+    if isinstance(code, str) and code.strip():
+        return code.strip().upper()
+    return _detect_currency("", domain)
+
+
+# ---------------------------------------------------------------------------
+# Redis caching (lazy init)
+# ---------------------------------------------------------------------------
+
+_redis = None
+
+
+async def _get_redis():
+    global _redis
+    if _redis is None:
+        try:
+            from app.config import get_settings
+            settings = get_settings()
+            if settings.redis_url:
+                import redis.asyncio as aioredis
+                _redis = aioredis.from_url(
+                    settings.redis_url,
+                    decode_responses=True,
+                    socket_connect_timeout=3,
+                )
+                # Quick connectivity check
+                await _redis.ping()
+        except Exception as exc:
+            logger.debug("Redis not available for autofill cache: %s", exc)
+            _redis = False  # sentinel: don't retry every call
+    if _redis is False:
+        return None
+    return _redis
+
+
+# ---------------------------------------------------------------------------
+# Helper dataclass for merge scoring
+# ---------------------------------------------------------------------------
 
 @dataclass
 class FieldValue:
@@ -61,13 +158,12 @@ class FieldValue:
 # SSRF protection
 # ---------------------------------------------------------------------------
 
-def is_private_ip(url: str) -> bool:
-    """Return True if the URL resolves to a private/reserved IP address."""
+def _is_private_ip(url: str) -> bool:
+    """Return True if the URL resolves to a private / reserved IP address."""
     try:
         hostname = urlparse(url).hostname
         if not hostname:
             return True
-
         addr_infos = socket.getaddrinfo(hostname, None)
         for _, _, _, _, sockaddr in addr_infos:
             ip = ipaddress.ip_address(sockaddr[0])
@@ -90,68 +186,145 @@ def is_private_ip(url: str) -> bool:
 # ---------------------------------------------------------------------------
 
 async def fetch_metadata(url: str) -> dict:
-    """Scrape a product page and return structured metadata."""
-    result = dict(_EMPTY_RESULT)
+    """Scrape a product page and return structured metadata.
 
+    Returns
+    -------
+    dict with keys:
+        success       : bool
+        title         : str | None
+        description   : str | None
+        image_url     : str | None
+        price         : float | None
+        currency      : str          (ISO code, default "RUB")
+        source_domain : str          (e.g. "ozon.ru")
+        error         : str | None
+    """
     url = _normalize_input_url(url)
+    domain = urlparse(url).netloc.lower().replace("www.", "")
 
-    if is_private_ip(url):
-        result["error_message"] = "URL указывает на внутренний адрес"
-        return result
+    result: dict = {
+        "success": False,
+        "title": None,
+        "description": None,
+        "image_url": None,
+        "price": None,
+        "currency": "RUB",
+        "source_domain": domain,
+        "error": None,
+    }
 
-    try:
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, http2=False) as client:
-            response = await client.get(url, headers=HEADERS)
-    except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout):
-        result["error_message"] = "Сайт недоступен"
-        return result
-    except Exception as exc:
-        result["error_message"] = f"Сайт недоступен: {exc}"
-        return result
-
-    if response.status_code == 403:
-        result["error_message"] = "Сайт заблокировал запрос"
-        return result
-    if response.status_code == 404:
-        result["error_message"] = "Страница не найдена"
-        return result
-    if response.status_code >= 400:
-        result["error_message"] = f"Ошибка HTTP {response.status_code}"
+    # --- SSRF guard ---
+    if _is_private_ip(url):
+        result["error"] = "URL указывает на внутренний адрес"
         return result
 
-    html = response.text
-    final_url = str(response.url)
+    # --- Redis cache lookup ---
+    redis = await _get_redis()
+    if redis:
+        try:
+            cached = await redis.get(f"autofill:{url}")
+            if cached:
+                return json.loads(cached)
+        except Exception as exc:
+            logger.debug("Redis GET failed: %s", exc)
+
+    # --- Fetch HTML with retry + UA rotation ---
+    html: str | None = None
+    last_status: int | None = None
+
+    for attempt in range(3):
+        try:
+            ua = USER_AGENTS[attempt % len(USER_AGENTS)]
+            headers = {
+                "User-Agent": ua,
+                "Accept": _ACCEPT_HEADER,
+                "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+            }
+            async with httpx.AsyncClient(
+                timeout=15.0, follow_redirects=True, http2=False,
+            ) as client:
+                response = await client.get(url, headers=headers)
+                last_status = response.status_code
+                if response.status_code == 200:
+                    html = response.text
+                    final_url = str(response.url)
+                    break
+                # 403 / 429 — retry with another UA
+                if response.status_code in (403, 429):
+                    logger.info(
+                        "Attempt %d: HTTP %d for %s, retrying with another UA",
+                        attempt + 1, response.status_code, url,
+                    )
+                    if attempt < 2:
+                        await asyncio.sleep(1 + attempt)
+                    continue
+                # Other client/server errors — no point retrying
+                break
+        except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout) as exc:
+            logger.warning("Attempt %d failed for %s: %s", attempt + 1, url, exc)
+            if attempt < 2:
+                await asyncio.sleep(1 + attempt)
+        except Exception as exc:
+            logger.warning("Attempt %d unexpected error for %s: %s", attempt + 1, url, exc)
+            if attempt < 2:
+                await asyncio.sleep(1)
+
+    if not html:
+        if last_status == 403:
+            result["error"] = "Сайт заблокировал запрос"
+        elif last_status == 404:
+            result["error"] = "Страница не найдена"
+        elif last_status and last_status >= 400:
+            result["error"] = f"Ошибка HTTP {last_status}"
+        else:
+            result["error"] = "Не удалось загрузить страницу"
+        return result
+
+    # --- Parse ---
     soup = BeautifulSoup(html, "lxml")
 
     layers = [
-        _extract_jsonld(soup),
-        _extract_microdata(soup),
+        _extract_jsonld(soup, domain),
+        _extract_microdata(soup, domain),
         _extract_site_specific(final_url, soup, html),
-        _extract_og_meta(soup),
-        _extract_script_state(html),
-        _extract_fallback(soup, html, final_url),
+        _extract_og_meta(soup, domain),
+        _extract_script_state(html, domain),
+        _extract_fallback(soup, html, final_url, domain),
     ]
 
     merged = _merge_layers(layers)
 
     title = _cleanup_title(str(merged["title"]))[:255] if merged["title"] else None
-    description = _cleanup_description(str(merged["description"]))[:500] if merged["description"] else None
-    image_url = _normalize_url(str(merged["image_url"]), final_url) if merged["image_url"] else None
+    description = (
+        _cleanup_description(str(merged["description"]))[:500]
+        if merged["description"] else None
+    )
+    image_url = (
+        _normalize_url(str(merged["image_url"]), final_url)
+        if merged["image_url"] else None
+    )
     price = merged["price"]
+    currency = merged.get("currency") or _detect_currency(html[:3000], domain)
 
     has_any = any([title, description, image_url, price is not None])
     if not has_any:
-        result["error_message"] = "Не удалось извлечь данные"
+        result["error"] = "Не удалось извлечь данные"
         return result
 
     result["title"] = title or None
     result["description"] = description or None
     result["image_url"] = image_url or None
     result["price"] = price
+    result["currency"] = currency
     result["success"] = True
 
-    if not title or not image_url or price is None:
-        result["partial"] = True
+    # --- Redis cache write ---
+    if redis and result["success"]:
+        try:
+            await redis.setex(f"autofill:{url}", 3600, json.dumps(result, ensure_ascii=False))
+        except Exception as exc:
+            logger.debug("Redis SETEX failed: %s", exc)
 
     return result
 
@@ -164,7 +337,7 @@ def _merge_layers(layers: list[dict]) -> dict:
     best: dict[str, FieldValue] = {}
     for layer in layers:
         score = int(layer.get("_score", 10))
-        for field in ("title", "description", "image_url", "price"):
+        for field in ("title", "description", "image_url", "price", "currency"):
             value = layer.get(field)
             if value is None or value == "":
                 continue
@@ -172,18 +345,19 @@ def _merge_layers(layers: list[dict]) -> dict:
                 best[field] = FieldValue(value=value, score=score)
 
     return {
-        "title": best.get("title").value if best.get("title") else None,
-        "description": best.get("description").value if best.get("description") else None,
-        "image_url": best.get("image_url").value if best.get("image_url") else None,
-        "price": best.get("price").value if best.get("price") else None,
+        "title": best["title"].value if "title" in best else None,
+        "description": best["description"].value if "description" in best else None,
+        "image_url": best["image_url"].value if "image_url" in best else None,
+        "price": best["price"].value if "price" in best else None,
+        "currency": best["currency"].value if "currency" in best else None,
     }
 
 
 # ---------------------------------------------------------------------------
-# JSON-LD
+# 1. JSON-LD
 # ---------------------------------------------------------------------------
 
-def _extract_jsonld(soup: BeautifulSoup) -> dict:
+def _extract_jsonld(soup: BeautifulSoup, domain: str = "") -> dict:
     data: dict = {"_score": 100}
     scripts = soup.find_all("script", type="application/ld+json")
 
@@ -209,6 +383,13 @@ def _extract_jsonld(soup: BeautifulSoup) -> dict:
         price = _extract_price_from_jsonld(product)
         if price is not None:
             data["price"] = price
+
+        # Currency from JSON-LD offers
+        offers = product.get("offers")
+        if isinstance(offers, dict):
+            data["currency"] = _detect_currency_from_jsonld(offers, domain)
+        elif isinstance(offers, list) and offers:
+            data["currency"] = _detect_currency_from_jsonld(offers[0], domain)
 
         if any(data.get(k) for k in ("title", "description", "image_url", "price")):
             return data
@@ -291,10 +472,10 @@ def _extract_price_from_jsonld(product: dict) -> float | None:
 
 
 # ---------------------------------------------------------------------------
-# Microdata
+# 2. Microdata
 # ---------------------------------------------------------------------------
 
-def _extract_microdata(soup: BeautifulSoup) -> dict:
+def _extract_microdata(soup: BeautifulSoup, domain: str = "") -> dict:
     data: dict = {"_score": 90}
     scopes = soup.select('[itemscope][itemtype*="Product" i]')
 
@@ -317,10 +498,17 @@ def _extract_microdata(soup: BeautifulSoup) -> dict:
         )
 
         for prop in ("price", "lowPrice", "highPrice"):
-            parsed = _parse_price_value(_prop_content(scope, prop) or _prop_text(scope, prop))
+            raw_text = _prop_content(scope, prop) or _prop_text(scope, prop) or ""
+            parsed = _parse_price_value(raw_text)
             if parsed is not None:
                 data["price"] = parsed
+                data["currency"] = _detect_currency(raw_text, domain)
                 break
+
+        # Check priceCurrency itemprop
+        currency_text = _prop_content(scope, "priceCurrency")
+        if currency_text:
+            data["currency"] = currency_text.strip().upper()
 
         if any(data.get(k) for k in ("title", "description", "image_url", "price")):
             return data
@@ -352,7 +540,7 @@ def _prop_attr(scope: Tag, prop: str, attr: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# Site-specific
+# 3. Site-specific parsers (Russian stores)
 # ---------------------------------------------------------------------------
 
 def _extract_site_specific(url: str, soup: BeautifulSoup, html: str) -> dict:
@@ -376,10 +564,17 @@ def _extract_site_specific(url: str, soup: BeautifulSoup, html: str) -> dict:
 
 
 def _parse_ozon(soup: BeautifulSoup, html: str) -> dict:
-    data = {"_score": 80}
-    data["title"] = _first_non_empty(_get_og(soup, "og:title"), _extract_title_from_dom(soup))
-    data["description"] = _first_non_empty(_get_og(soup, "og:description"), _extract_description_from_dom(soup))
-    data["image_url"] = _first_non_empty(_get_og(soup, "og:image"), _extract_best_image(soup, "https://ozon.ru"))
+    data: dict = {"_score": 80, "currency": "RUB"}
+    data["title"] = _first_non_empty(
+        _get_og(soup, "og:title"), _extract_title_from_dom(soup),
+    )
+    data["description"] = _first_non_empty(
+        _get_og(soup, "og:description"), _extract_description_from_dom(soup),
+    )
+    data["image_url"] = _first_non_empty(
+        _get_og(soup, "og:image"),
+        _extract_best_image(soup, "https://ozon.ru"),
+    )
     data["price"] = _extract_price_from_patterns(html, [
         r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
         r'"finalPrice"\s*:\s*(\d+(?:[.,]\d+)?)',
@@ -389,9 +584,14 @@ def _parse_ozon(soup: BeautifulSoup, html: str) -> dict:
 
 
 def _parse_wildberries(soup: BeautifulSoup, html: str) -> dict:
-    data = {"_score": 80}
-    data["title"] = _first_non_empty(_get_og(soup, "og:title"), _extract_title_from_dom(soup))
-    data["image_url"] = _first_non_empty(_get_og(soup, "og:image"), _extract_best_image(soup, "https://wildberries.ru"))
+    data: dict = {"_score": 80, "currency": "RUB"}
+    data["title"] = _first_non_empty(
+        _get_og(soup, "og:title"), _extract_title_from_dom(soup),
+    )
+    data["image_url"] = _first_non_empty(
+        _get_og(soup, "og:image"),
+        _extract_best_image(soup, "https://wildberries.ru"),
+    )
     data["price"] = _extract_price_from_patterns(html, [
         r'"salePriceU"\s*:\s*(\d+)',
         r'"priceU"\s*:\s*(\d+)',
@@ -401,9 +601,14 @@ def _parse_wildberries(soup: BeautifulSoup, html: str) -> dict:
 
 
 def _parse_dns(soup: BeautifulSoup, html: str) -> dict:
-    data = {"_score": 80}
-    data["title"] = _first_non_empty(_get_og(soup, "og:title"), _extract_title_from_dom(soup))
-    data["image_url"] = _first_non_empty(_get_og(soup, "og:image"), _extract_best_image(soup, "https://dns-shop.ru"))
+    data: dict = {"_score": 80, "currency": "RUB"}
+    data["title"] = _first_non_empty(
+        _get_og(soup, "og:title"), _extract_title_from_dom(soup),
+    )
+    data["image_url"] = _first_non_empty(
+        _get_og(soup, "og:image"),
+        _extract_best_image(soup, "https://dns-shop.ru"),
+    )
     data["price"] = _extract_price_from_patterns(html, [
         r'"price"\s*:\s*(\d+(?:[.,]\d+)?)',
         r'"priceValue"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
@@ -412,9 +617,14 @@ def _parse_dns(soup: BeautifulSoup, html: str) -> dict:
 
 
 def _parse_mvideo(soup: BeautifulSoup, html: str) -> dict:
-    data = {"_score": 80}
-    data["title"] = _first_non_empty(_get_og(soup, "og:title"), _extract_title_from_dom(soup))
-    data["image_url"] = _first_non_empty(_get_og(soup, "og:image"), _extract_best_image(soup, "https://mvideo.ru"))
+    data: dict = {"_score": 80, "currency": "RUB"}
+    data["title"] = _first_non_empty(
+        _get_og(soup, "og:title"), _extract_title_from_dom(soup),
+    )
+    data["image_url"] = _first_non_empty(
+        _get_og(soup, "og:image"),
+        _extract_best_image(soup, "https://mvideo.ru"),
+    )
     data["price"] = _extract_price_from_patterns(html, [
         r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
         r'"finalPrice"\s*:\s*(\d+(?:[.,]\d+)?)',
@@ -424,9 +634,14 @@ def _parse_mvideo(soup: BeautifulSoup, html: str) -> dict:
 
 
 def _parse_lamoda(soup: BeautifulSoup, html: str) -> dict:
-    data = {"_score": 80}
-    data["title"] = _first_non_empty(_get_og(soup, "og:title"), _extract_title_from_dom(soup))
-    data["image_url"] = _first_non_empty(_get_og(soup, "og:image"), _extract_best_image(soup, "https://lamoda.ru"))
+    data: dict = {"_score": 80, "currency": "RUB"}
+    data["title"] = _first_non_empty(
+        _get_og(soup, "og:title"), _extract_title_from_dom(soup),
+    )
+    data["image_url"] = _first_non_empty(
+        _get_og(soup, "og:image"),
+        _extract_best_image(soup, "https://lamoda.ru"),
+    )
     data["price"] = _extract_price_from_patterns(html, [
         r'"price"\s*:\s*(\d+(?:[.,]\d+)?)',
         r'"finalPrice"\s*:\s*(\d+(?:[.,]\d+)?)',
@@ -435,10 +650,10 @@ def _parse_lamoda(soup: BeautifulSoup, html: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Meta / script state / fallback
+# 4. Open Graph + Twitter Card meta tags
 # ---------------------------------------------------------------------------
 
-def _extract_og_meta(soup: BeautifulSoup) -> dict:
+def _extract_og_meta(soup: BeautifulSoup, domain: str = "") -> dict:
     data: dict = {"_score": 70}
     data["title"] = _first_non_empty(
         _get_og(soup, "og:title"),
@@ -456,11 +671,27 @@ def _extract_og_meta(soup: BeautifulSoup) -> dict:
         _get_meta(soup, "twitter:image"),
         _get_meta(soup, "twitter:image:src"),
     )
-    data["price"] = _extract_price_from_meta(soup)
+    price_raw = _extract_price_from_meta(soup)
+    data["price"] = price_raw
+
+    # Try og:price:currency or product:price:currency
+    og_currency = _first_non_empty(
+        _get_og(soup, "og:price:currency"),
+        _get_og(soup, "product:price:currency"),
+    )
+    if og_currency:
+        data["currency"] = str(og_currency).strip().upper()
+    elif price_raw is not None:
+        data["currency"] = _detect_currency("", domain)
+
     return data
 
 
-def _extract_script_state(html: str) -> dict:
+# ---------------------------------------------------------------------------
+# 5. Script state (__NEXT_DATA__, etc.)
+# ---------------------------------------------------------------------------
+
+def _extract_script_state(html: str, domain: str = "") -> dict:
     data: dict = {"_score": 60}
     scripts = re.findall(r"<script[^>]*>(.*?)</script>", html, re.IGNORECASE | re.DOTALL)
 
@@ -471,7 +702,9 @@ def _extract_script_state(html: str) -> dict:
             product = _find_product_in_jsonld(parsed)
             if product:
                 data["title"] = _first_non_empty(data.get("title"), product.get("name"))
-                data["image_url"] = _first_non_empty(data.get("image_url"), _extract_image_from_jsonld(product))
+                data["image_url"] = _first_non_empty(
+                    data.get("image_url"), _extract_image_from_jsonld(product),
+                )
                 if data.get("price") is None:
                     data["price"] = _extract_price_from_jsonld(product)
 
@@ -487,20 +720,44 @@ def _extract_script_state(html: str) -> dict:
         if data.get("title") and data.get("image_url") and data.get("price") is not None:
             break
 
+    if data.get("price") is not None and "currency" not in data:
+        data["currency"] = _detect_currency("", domain)
+
     return data
 
 
-def _extract_fallback(soup: BeautifulSoup, html: str, base_url: str) -> dict:
+# ---------------------------------------------------------------------------
+# 6. Fallback (CSS selectors, data-attributes, regex in HTML)
+# ---------------------------------------------------------------------------
+
+def _extract_fallback(soup: BeautifulSoup, html: str, base_url: str, domain: str = "") -> dict:
     data: dict = {"_score": 50}
     data["title"] = _extract_title_from_dom(soup)
     data["description"] = _extract_description_from_dom(soup)
     data["price"] = _extract_price(soup, html)
     data["image_url"] = _extract_best_image(soup, base_url)
+
+    # Try to detect currency from visible price text in DOM
+    if data["price"] is not None:
+        for selector in ("[itemprop='price']", ".price", ".product-price"):
+            el = soup.select_one(selector)
+            if isinstance(el, Tag):
+                raw = el.get_text(" ", strip=True)
+                detected = _detect_currency(raw, domain)
+                if detected:
+                    data["currency"] = detected
+                    break
+
     return data
 
 
 def _extract_title_from_dom(soup: BeautifulSoup) -> str | None:
-    for selector in ["h1", "[data-testid='product-title']", ".product-title", ".pdp-title"]:
+    for selector in [
+        "h1",
+        "[data-testid='product-title']",
+        ".product-title",
+        ".pdp-title",
+    ]:
         el = soup.select_one(selector)
         if isinstance(el, Tag):
             text = el.get_text(" ", strip=True)
@@ -530,6 +787,7 @@ def _extract_price_from_meta(soup: BeautifulSoup) -> float | None:
     meta_names = [
         ("itemprop", "price"),
         ("property", "product:price:amount"),
+        ("property", "og:price:amount"),
         ("name", "price"),
         ("name", "twitter:data1"),
     ]
@@ -537,14 +795,16 @@ def _extract_price_from_meta(soup: BeautifulSoup) -> float | None:
         tag = soup.find("meta", attrs={key: value})
         if not isinstance(tag, Tag):
             continue
-        parsed = _parse_price_value(_first_non_empty(tag.get("content"), tag.get("value")))
+        parsed = _parse_price_value(
+            _first_non_empty(tag.get("content"), tag.get("value"))
+        )
         if parsed is not None:
             return parsed
     return None
 
 
 def _extract_price(soup: BeautifulSoup, html: str) -> float | None:
-    # attributes first
+    # data-attributes first
     attrs = ["data-price", "data-price-value", "data-product-price", "content"]
     for attr in attrs:
         tag = soup.find(attrs={attr: True})
@@ -555,11 +815,18 @@ def _extract_price(soup: BeautifulSoup, html: str) -> float | None:
             return parsed
 
     # elements with price semantics
-    for selector in ["[itemprop='price']", ".price", ".product-price", "[data-testid*='price']"]:
+    for selector in [
+        "[itemprop='price']",
+        ".price",
+        ".product-price",
+        "[data-testid*='price']",
+    ]:
         for el in soup.select(selector):
             if not isinstance(el, Tag):
                 continue
-            parsed = _parse_price_value(_first_non_empty(el.get("content"), el.get_text(" ", strip=True)))
+            parsed = _parse_price_value(
+                _first_non_empty(el.get("content"), el.get_text(" ", strip=True))
+            )
             if parsed is not None:
                 return parsed
 
@@ -572,7 +839,11 @@ def _extract_price(soup: BeautifulSoup, html: str) -> float | None:
     ])
 
 
-def _extract_price_from_patterns(text: str, patterns: list[str], divide_by: int | None = None) -> float | None:
+def _extract_price_from_patterns(
+    text: str,
+    patterns: list[str],
+    divide_by: int | None = None,
+) -> float | None:
     for pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE)
         if not match:
@@ -587,10 +858,14 @@ def _extract_price_from_patterns(text: str, patterns: list[str], divide_by: int 
     return None
 
 
+# ---------------------------------------------------------------------------
+# Image extraction (improved: exclude < 100 px, prefer largest)
+# ---------------------------------------------------------------------------
+
 def _extract_best_image(soup: BeautifulSoup, base_url: str) -> str | None:
     candidates: list[tuple[int, str]] = []
 
-    # direct meta images are strong
+    # meta images are strong signals
     for value in [
         _get_og(soup, "og:image"),
         _get_og(soup, "og:image:url"),
@@ -619,18 +894,27 @@ def _extract_best_image(soup: BeautifulSoup, base_url: str) -> str | None:
         if _SKIP_IMAGE_PATTERNS.search(combined):
             continue
 
+        # Filter out tiny images (likely icons / spacers)
+        width = _safe_int(img.get("width"))
+        height = _safe_int(img.get("height"))
+        if width is not None and width < _MIN_IMAGE_PX:
+            continue
+        if height is not None and height < _MIN_IMAGE_PX:
+            continue
+
         score = 30
+
         if _PREFER_IMAGE_PATTERNS.search(combined):
             score += 25
 
-        width = _safe_int(img.get("width"))
-        height = _safe_int(img.get("height"))
         if width and height:
             area = width * height
             if area >= 250_000:
                 score += 30
             elif area >= 80_000:
                 score += 15
+            # Bonus: prefer the largest image overall
+            score += min(area // 10_000, 20)
 
         candidates.append((score, _normalize_url(src, base_url)))
 
@@ -663,17 +947,20 @@ def _extract_image_candidate(img: Tag) -> str:
 def _safe_json_load(raw: str | None) -> Any:
     if not raw:
         return None
-
     candidate = raw.strip()
     candidate = re.sub(r"^\s*//.*$", "", candidate, flags=re.MULTILINE).strip()
     if not candidate:
         return None
-
     try:
         return json.loads(candidate)
     except Exception:
-        # try to recover object from JS assignment
-        return json.loads(_extract_json_object(candidate)) if _extract_json_object(candidate) else None
+        obj = _extract_json_object(candidate)
+        if obj:
+            try:
+                return json.loads(obj)
+            except Exception:
+                pass
+        return None
 
 
 def _extract_json_object(text: str) -> str:
@@ -681,7 +968,7 @@ def _extract_json_object(text: str) -> str:
     end = text.rfind("}")
     if start == -1 or end == -1 or end <= start:
         return ""
-    return text[start : end + 1]
+    return text[start: end + 1]
 
 
 def _first_non_empty(*values: Any) -> Any:
@@ -713,6 +1000,14 @@ def _get_title(soup: BeautifulSoup) -> str | None:
 
 
 def _parse_price_value(value: Any) -> float | None:
+    """Parse a price from various formats.
+
+    Handles:
+      - numeric types (int, float)
+      - dict with price/amount/value keys
+      - strings like "15 000", "5 400,50", "от 15 000 руб",
+        "Цена: 5 400 р.", "от 1 299₽"
+    """
     if value is None:
         return None
 
@@ -732,11 +1027,29 @@ def _parse_price_value(value: Any) -> float | None:
     if not text.strip():
         return None
 
-    # remove html / entities / currency words
+    # Strip HTML entities/tags
     text = _strip_html(text)
-    text = text.replace("\u00a0", " ").replace("₽", " ")
-    text = re.sub(r"(руб\.?|rur|rub|usd|eur|грн|uah|тенге|kzt)", " ", text, flags=re.IGNORECASE)
 
+    # Normalize whitespace variants
+    text = text.replace("\u00a0", " ").replace("₽", " ")
+
+    # Remove leading words like "от", "Цена:", "Price:"
+    text = re.sub(
+        r"^[\s]*(?:от|до|цена|price|стоимость)\s*:?\s*",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    # Remove currency words/symbols (but keep digits)
+    text = re.sub(
+        r"(руб\.?|rur\b|rub\b|usd\b|eur\b|грн\.?|uah\b|тенге|kzt\b|р\.)",
+        " ",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    # Find all number-like tokens  (e.g. "15 000" or "5 400,50")
     numbers = re.findall(r"\d[\d\s]*(?:[.,]\d+)?", text)
     if not numbers:
         return None
@@ -748,10 +1061,8 @@ def _parse_price_value(value: Any) -> float | None:
             num = float(normalized)
         except ValueError:
             continue
-
         if num <= 0:
             continue
-        # ignore impossible product prices
         if num > 1_000_000_000:
             continue
         candidates.append(num)
@@ -759,7 +1070,7 @@ def _parse_price_value(value: Any) -> float | None:
     if not candidates:
         return None
 
-    # Usually first in pricing blocks is current price
+    # Usually the first number in a pricing block is the current price
     return round(candidates[0], 2)
 
 
@@ -783,7 +1094,6 @@ def _pick_src_from_srcset(srcset: str) -> str:
     parts = [part.strip() for part in srcset.split(",") if part.strip()]
     if not parts:
         return ""
-
     # prefer the largest candidate (usually last), strip descriptor
     candidate = parts[-1].split(" ")[0].strip()
     return candidate
@@ -801,7 +1111,12 @@ def _normalize_input_url(url: str) -> str:
 def _cleanup_title(title: str) -> str:
     clean = _strip_html(title)
     clean = re.sub(r"\s+", " ", clean).strip()
-    clean = re.sub(r"\s+[|•·-]\s+(официальный магазин|купить.*|цена.*)$", "", clean, flags=re.IGNORECASE)
+    clean = re.sub(
+        r"\s+[|•·\-–—]\s+(официальный магазин|купить.*|цена.*)$",
+        "",
+        clean,
+        flags=re.IGNORECASE,
+    )
     return clean
 
 

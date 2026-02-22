@@ -22,44 +22,37 @@ async def contribute(
     user: User | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Item).where(Item.id == item_id, Item.is_deleted == False))
+    result = await db.execute(select(Item).where(Item.id == item_id))
     item = result.scalar_one_or_none()
     if not item:
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=404, detail="Подарок не найден")
     if not item.is_group_gift:
-        raise HTTPException(status_code=400, detail="Item is not a group gift")
+        raise HTTPException(status_code=400, detail="Это не групповой подарок")
 
     wl_result = await db.execute(select(Wishlist).where(Wishlist.id == item.wishlist_id))
     wishlist = wl_result.scalar_one()
 
     if not wishlist.is_active:
-        raise HTTPException(status_code=400, detail="Wishlist is not active")
-
-    if user and wishlist.user_id == user.id:
-        raise HTTPException(status_code=403, detail="Cannot contribute to your own item")
-
+        raise HTTPException(status_code=400, detail="Вишлист неактивен")
+    if user and wishlist.owner_id == user.id:
+        raise HTTPException(status_code=403, detail="Нельзя внести вклад в свой подарок")
     if not user and not data.guest_name:
-        raise HTTPException(status_code=400, detail="Guest name required")
+        raise HTTPException(status_code=400, detail="Укажите имя гостя")
 
-    if data.amount <= 0:
-        raise HTTPException(status_code=400, detail="Amount must be positive")
-
-    # Cap contribution to remaining amount if item has a price
     if item.price and item.price > 0:
         existing_total_result = await db.execute(
-            select(sa_func.coalesce(sa_func.sum(Contribution.amount), 0))
-            .where(Contribution.item_id == item_id)
+            select(sa_func.coalesce(sa_func.sum(Contribution.amount), 0)).where(Contribution.item_id == item_id)
         )
         existing_total = existing_total_result.scalar_one()
         remaining = item.price - existing_total
         if remaining <= 0:
-            raise HTTPException(status_code=400, detail="Item is already fully funded")
+            raise HTTPException(status_code=400, detail="Подарок уже полностью оплачен")
         if data.amount > remaining:
             data.amount = remaining
 
     contribution = Contribution(
         item_id=item_id,
-        user_id=user.id if user else None,
+        contributor_id=user.id if user else None,
         guest_name=data.guest_name if not user else None,
         guest_identifier=data.guest_identifier if not user else None,
         amount=data.amount,
@@ -68,7 +61,6 @@ async def contribute(
     db.add(contribution)
     await db.flush()
 
-    # Get updated totals
     totals = await db.execute(
         select(sa_func.coalesce(sa_func.sum(Contribution.amount), 0), sa_func.count(Contribution.id))
         .where(Contribution.item_id == item_id)
@@ -99,14 +91,14 @@ async def remove_contribution(
     result = await db.execute(select(Contribution).where(Contribution.id == contribution_id))
     contribution = result.scalar_one_or_none()
     if not contribution:
-        raise HTTPException(status_code=404, detail="Contribution not found")
+        raise HTTPException(status_code=404, detail="Вклад не найден")
 
-    if user and contribution.user_id == user.id:
+    if user and contribution.contributor_id == user.id:
         pass
     elif data and data.guest_identifier and contribution.guest_identifier == data.guest_identifier:
         pass
     else:
-        raise HTTPException(status_code=403, detail="Not authorized")
+        raise HTTPException(status_code=403, detail="Нет прав")
 
     item_result = await db.execute(select(Item).where(Item.id == contribution.item_id))
     item = item_result.scalar_one()
@@ -131,4 +123,4 @@ async def remove_contribution(
         "contribution_count": count,
     })
 
-    return {"message": "Contribution removed"}
+    return {"message": "Вклад удалён"}

@@ -1,5 +1,6 @@
 from typing import Optional
-
+from uuid import UUID
+from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 
@@ -7,14 +8,24 @@ class GoogleAuthRequest(BaseModel):
     credential: str = Field(..., min_length=10)
 
 
+class AppleAuthRequest(BaseModel):
+    identity_token: str = Field(..., min_length=10)
+    full_name: Optional[str] = None
+
+
 class RefreshRequest(BaseModel):
     refresh_token: str = Field(...)
+
+
+class PushTokenRequest(BaseModel):
+    expo_push_token: str = Field(..., min_length=10)
 
 
 class UserRegister(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8)
     full_name: Optional[str] = None
+    username: Optional[str] = Field(None, min_length=3, max_length=50, pattern=r'^[a-zA-Z0-9_]+$')
 
     model_config = ConfigDict(extra="forbid")
 
@@ -27,23 +38,42 @@ class UserLogin(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    full_name: Optional[str] = Field(None, max_length=200)
+    full_name: Optional[str] = Field(None, max_length=255)
+    username: Optional[str] = Field(None, min_length=3, max_length=50, pattern=r'^[a-zA-Z0-9_]+$')
     avatar_url: Optional[str] = None
-    is_active: Optional[bool] = None
+    bio: Optional[str] = Field(None, max_length=500)
+    theme: Optional[str] = None
+    biometrics_enabled: Optional[bool] = None
 
     model_config = ConfigDict(extra="forbid")
 
 
 class UserResponse(BaseModel):
-    id: int
+    id: UUID
     email: EmailStr
     full_name: Optional[str] = None
+    username: Optional[str] = None
     avatar_url: Optional[str] = None
-    oauth_provider: Optional[str] = None
-    oauth_id: Optional[str] = None
-    is_active: bool = True
+    bio: Optional[str] = None
+    is_premium: bool = False
+    is_online: bool = False
+    theme: str = "deep_amethyst"
+    google_id: Optional[str] = None
+    apple_id: Optional[str] = None
+    created_at: datetime
 
-    # allow constructing from ORM objects with .model_validate(...)
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserPublicResponse(BaseModel):
+    id: UUID
+    full_name: Optional[str] = None
+    username: Optional[str] = None
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    is_premium: bool = False
+    is_online: bool = False
+
     model_config = ConfigDict(from_attributes=True)
 
 

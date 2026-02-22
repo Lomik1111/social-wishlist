@@ -1,26 +1,28 @@
-from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
 from decimal import Decimal
+from typing import Optional
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class ContributionCreate(BaseModel):
-    amount: Decimal
-    message: str | None = None
-    guest_name: str | None = None
-    guest_identifier: str | None = None
+    amount: Decimal = Field(..., gt=0)
+    message: Optional[str] = Field(None, max_length=500)
+    guest_name: Optional[str] = None
+    guest_identifier: Optional[str] = None
 
 
 class ContributionResponse(BaseModel):
     id: UUID
     item_id: UUID
+    contributor_id: Optional[UUID]
+    guest_name: Optional[str]
     amount: Decimal
-    message: str | None
-    guest_name: str | None
+    message: Optional[str]
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ContributionDeleteRequest(BaseModel):
-    guest_identifier: str | None = None
+    guest_identifier: Optional[str] = None

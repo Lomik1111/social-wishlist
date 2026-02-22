@@ -25,10 +25,10 @@ async def create_item(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Wishlist).where(Wishlist.id == wishlist_id, Wishlist.user_id == user.id))
+    result = await db.execute(select(Wishlist).where(Wishlist.id == wishlist_id, Wishlist.owner_id == user.id))
     wishlist = result.scalar_one_or_none()
     if not wishlist:
-        raise HTTPException(status_code=404, detail="Wishlist not found")
+        raise HTTPException(status_code=404, detail="Вишлист не найден")
 
     max_order = await db.execute(
         select(Item.sort_order).where(Item.wishlist_id == wishlist_id).order_by(Item.sort_order.desc()).limit(1)
@@ -39,18 +39,12 @@ async def create_item(
     db.add(item)
     await db.flush()
 
+    # Update counter
+    wishlist.item_count = wishlist.item_count + 1
+
     await ws_manager.broadcast(str(wishlist_id), {
         "type": "item_added",
-        "item": {
-            "id": str(item.id),
-            "name": item.name,
-            "description": item.description,
-            "url": item.url,
-            "image_url": item.image_url,
-            "price": str(item.price) if item.price else None,
-            "is_group_gift": item.is_group_gift,
-            "sort_order": item.sort_order,
-        },
+        "item": {"id": str(item.id), "name": item.name},
     })
 
     return ItemResponse.model_validate(item)
@@ -64,29 +58,19 @@ async def update_item(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Item).join(Wishlist).where(Item.id == item_id, Wishlist.user_id == user.id)
+        select(Item).join(Wishlist).where(Item.id == item_id, Wishlist.owner_id == user.id)
     )
     item = result.scalar_one_or_none()
     if not item:
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=404, detail="Подарок не найден")
 
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(item, key, value)
-
     await db.flush()
 
     await ws_manager.broadcast(str(item.wishlist_id), {
         "type": "item_updated",
-        "item": {
-            "id": str(item.id),
-            "name": item.name,
-            "description": item.description,
-            "url": item.url,
-            "image_url": item.image_url,
-            "price": str(item.price) if item.price else None,
-            "is_group_gift": item.is_group_gift,
-            "sort_order": item.sort_order,
-        },
+        "item": {"id": str(item.id), "name": item.name},
     })
 
     return ItemResponse.model_validate(item)
@@ -99,21 +83,28 @@ async def delete_item(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Item).join(Wishlist).where(Item.id == item_id, Wishlist.user_id == user.id)
+        select(Item).join(Wishlist).where(Item.id == item_id, Wishlist.owner_id == user.id)
     )
     item = result.scalar_one_or_none()
     if not item:
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=404, detail="Подарок не найден")
 
-    item.is_deleted = True
+    wishlist_id = item.wishlist_id
+    await db.delete(item)
     await db.flush()
 
-    await ws_manager.broadcast(str(item.wishlist_id), {
+    # Update counter
+    wl = await db.execute(select(Wishlist).where(Wishlist.id == wishlist_id))
+    wishlist = wl.scalar_one_or_none()
+    if wishlist:
+        wishlist.item_count = max(0, wishlist.item_count - 1)
+
+    await ws_manager.broadcast(str(wishlist_id), {
         "type": "item_deleted",
-        "item_id": str(item.id),
+        "item_id": str(item_id),
     })
 
-    return {"message": "Item deleted"}
+    return {"message": "Подарок удалён"}
 
 
 @router.put("/wishlists/{wishlist_id}/items/reorder")
@@ -123,27 +114,24 @@ async def reorder_items(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Wishlist).where(Wishlist.id == wishlist_id, Wishlist.user_id == user.id))
-    wishlist = result.scalar_one_or_none()
-    if not wishlist:
-        raise HTTPException(status_code=404, detail="Wishlist not found")
+    result = await db.execute(select(Wishlist).where(Wishlist.id == wishlist_id, Wishlist.owner_id == user.id))
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Вишлист не найден")
 
     items_result = await db.execute(
-        select(Item).where(Item.wishlist_id == wishlist_id, Item.is_deleted == False)
+        select(Item).where(Item.wishlist_id == wishlist_id)
     )
     items_map = {item.id: item for item in items_result.scalars().all()}
 
     for idx, item_id in enumerate(data.item_ids):
         item = items_map.get(item_id)
         if not item:
-            raise HTTPException(status_code=400, detail=f"Item {item_id} not found in this wishlist")
+            raise HTTPException(status_code=400, detail=f"Подарок {item_id} не найден в этом вишлисте")
         item.sort_order = idx
 
     await db.flush()
-
     await ws_manager.broadcast(str(wishlist_id), {
         "type": "items_reordered",
         "item_ids": [str(i) for i in data.item_ids],
     })
-
-    return {"message": "Items reordered"}
+    return {"message": "Порядок обновлён"}

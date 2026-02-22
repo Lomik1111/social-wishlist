@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
     environment: str = "development"
     google_client_id: str = ""
+    apple_client_id: str = ""
+    redis_url: str = ""
+    expo_push_url: str = "https://exp.host/--/api/v2/push/send"
 
     class Config:
         env_file = ".env"
