@@ -21,7 +21,15 @@ elif ".proxy.rlwy.net" in _db_url or ".railway.app" in _db_url:
     _ssl_ctx.verify_mode = _ssl.CERT_NONE
     _connect_args["ssl"] = _ssl_ctx
 
-engine = create_async_engine(_db_url, echo=False, connect_args=_connect_args)
+engine = create_async_engine(
+    _db_url,
+    echo=False,
+    connect_args=_connect_args,
+    pool_pre_ping=True,
+    pool_recycle=300,
+    pool_size=5,
+    max_overflow=10,
+)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
