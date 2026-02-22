@@ -1,3 +1,4 @@
+import ssl
 import sys
 import os
 import asyncio
@@ -55,15 +56,19 @@ def do_run_migrations(connection):
 
 
 async def run_async_migrations():
-    # Railway proxy does not support SSL at the PostgreSQL protocol level
+    # Railway public proxy expects direct TLS (not PostgreSQL SSLRequest negotiation)
     connect_args = {}
     if IS_RAILWAY:
-        connect_args["ssl"] = False
-        logger.info("Railway detected, SSL disabled")
+        ssl_ctx = ssl.create_default_context()
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = ssl.CERT_NONE
+        connect_args["ssl"] = ssl_ctx
+        connect_args["direct_tls"] = True
+        logger.info("Railway detected, using direct TLS")
 
     _parsed_host = urlparse(database_url).hostname or "unknown"
-    logger.info("Connecting to DB host: %s (railway=%s, ssl=%s)",
-                _parsed_host, IS_RAILWAY, connect_args.get("ssl", "default"))
+    logger.info("Connecting to DB host: %s (railway=%s, direct_tls=%s)",
+                _parsed_host, IS_RAILWAY, connect_args.get("direct_tls", False))
 
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
