@@ -4,7 +4,8 @@ import os
 import asyncio
 from logging.config import fileConfig
 from sqlalchemy import pool
-from sqlalchemy.ext.asyncio import async_engine_from_config
+import logging
+from sqlalchemy.ext.asyncio import async_engine_from_config, create_async_engine
 from alembic import context
 
 # Ensure app module is importable
@@ -41,6 +42,11 @@ def do_run_migrations(connection):
         context.run_migrations()
 
 
+logger = logging.getLogger("alembic.env")
+
+MAX_RETRIES = 5
+
+
 async def run_async_migrations():
     # Railway SSL handling
     connect_args = {}
@@ -52,15 +58,30 @@ async def run_async_migrations():
         ssl_ctx.verify_mode = ssl.CERT_NONE
         connect_args["ssl"] = ssl_ctx
 
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-        connect_args=connect_args,
-    )
-    async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
-    await connectable.dispose()
+    # Use create_async_engine directly so connect_args (including ssl=False) are
+    # passed straight to asyncpg without going through the alembic.ini config layer,
+    # which can silently drop keyword arguments in some SQLAlchemy versions.
+    for attempt in range(1, MAX_RETRIES + 1):
+        connectable = create_async_engine(
+            database_url,
+            poolclass=pool.NullPool,
+            connect_args=connect_args,
+        )
+        try:
+            async with connectable.connect() as connection:
+                await connection.run_sync(do_run_migrations)
+            await connectable.dispose()
+            return
+        except Exception as exc:
+            await connectable.dispose()
+            if attempt == MAX_RETRIES:
+                raise
+            wait = 2 ** (attempt - 1)  # 1 s, 2 s, 4 s, 8 s
+            logger.warning(
+                "DB connection attempt %d/%d failed (%s). Retrying in %ds...",
+                attempt, MAX_RETRIES, exc, wait,
+            )
+            await asyncio.sleep(wait)
 
 
 def run_migrations_online():
