@@ -15,6 +15,9 @@ jobs:
         with:
           node-version: 18
 
+      - name: Install expo-cli globally
+        run: npm install -g expo-cli
+
       - name: Install dependencies
         working-directory: wishly-mobile
         run: npm install --legacy-peer-deps
@@ -24,4 +27,4 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_PUBLIC_API_URL: https://social-wishlist-production.up.railway.app
-        run: npx expo publish --non-interactive
+        run: expo publish
