@@ -49,7 +49,23 @@ def run_migrations_offline():
         context.run_migrations()
 
 
+KNOWN_REVISIONS = {'001_full_schema'}
+
+
 def do_run_migrations(connection):
+    from sqlalchemy import text
+
+    # Clear stale alembic_version left by deleted migration files
+    try:
+        result = connection.execute(text("SELECT version_num FROM alembic_version LIMIT 1"))
+        current = result.scalar()
+        if current and current not in KNOWN_REVISIONS:
+            logger.warning("Clearing stale alembic revision '%s'", current)
+            connection.execute(text("DELETE FROM alembic_version"))
+            connection.commit()
+    except Exception:
+        connection.rollback()
+
     context.configure(connection=connection, target_metadata=target_metadata)
     with context.begin_transaction():
         context.run_migrations()
@@ -70,18 +86,18 @@ async def run_async_migrations():
         connect_args=connect_args,
     )
 
-    # Retry logic for Railway proxy cold-start connection resets
+    # Retry only on connection errors (not migration errors)
     max_retries = 5
     for attempt in range(1, max_retries + 1):
         try:
             async with connectable.connect() as connection:
                 await connection.run_sync(do_run_migrations)
             break
-        except Exception as e:
+        except (OSError, TimeoutError) as e:
             if attempt == max_retries:
                 logger.error("Failed to connect after %d attempts: %s", max_retries, e)
                 raise
-            wait = 2 ** attempt  # 2, 4, 8, 16, 32 seconds
+            wait = 2 ** attempt
             logger.warning(
                 "DB connection attempt %d/%d failed (%s), retrying in %ds...",
                 attempt, max_retries, e, wait,
