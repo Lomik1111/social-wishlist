@@ -1,0 +1,27 @@
+name: Publish to Expo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        working-directory: wishly-mobile
+        run: npm install --legacy-peer-deps
+
+      - name: Publish to Expo
+        working-directory: wishly-mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PUBLIC_API_URL: https://social-wishlist-production.up.railway.app
+        run: npx expo publish --non-interactive
