@@ -40,6 +40,18 @@
         }
       ],
       "expo-local-authentication"
-    ]
+    ],
+    "owner": "lokot667",
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_PROJECT_ID"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/YOUR_PROJECT_ID"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
   }
 }
