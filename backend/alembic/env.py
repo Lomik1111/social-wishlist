@@ -50,7 +50,23 @@ def run_migrations_offline():
         context.run_migrations()
 
 
+KNOWN_REVISIONS = {'001_full_schema'}
+
+
 def do_run_migrations(connection):
+    from sqlalchemy import text
+
+    # Clear stale alembic_version left by deleted migration files
+    try:
+        result = connection.execute(text("SELECT version_num FROM alembic_version LIMIT 1"))
+        current = result.scalar()
+        if current and current not in KNOWN_REVISIONS:
+            logger.warning("Clearing stale alembic revision '%s'", current)
+            connection.execute(text("DELETE FROM alembic_version"))
+            connection.commit()
+    except Exception:
+        connection.rollback()
+
     context.configure(connection=connection, target_metadata=target_metadata)
     with context.begin_transaction():
         context.run_migrations()
@@ -69,25 +85,25 @@ async def run_async_migrations():
     _parsed_host = urlparse(database_url).hostname or "unknown"
     logger.info("Connecting to DB host: %s (ssl=%s)", _parsed_host, connect_args.get("ssl", "default"))
 
-    # Use create_async_engine directly so connect_args (including ssl=False) are
-    # passed straight to asyncpg without going through the alembic.ini config layer,
-    # which can silently drop keyword arguments in some SQLAlchemy versions.
-    for attempt in range(1, MAX_RETRIES + 1):
-        connectable = create_async_engine(
-            database_url,
-            poolclass=pool.NullPool,
-            connect_args=connect_args,
-        )
+    connectable = async_engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+        connect_args=connect_args,
+    )
+
+    # Retry only on connection errors (not migration errors)
+    max_retries = 5
+    for attempt in range(1, max_retries + 1):
         try:
             async with connectable.connect() as connection:
                 await connection.run_sync(do_run_migrations)
-            await connectable.dispose()
-            return
-        except Exception as exc:
-            await connectable.dispose()
-            if attempt == MAX_RETRIES:
+            break
+        except (OSError, TimeoutError) as e:
+            if attempt == max_retries:
+                logger.error("Failed to connect after %d attempts: %s", max_retries, e)
                 raise
-            wait = 2 ** (attempt - 1)  # 1 s, 2 s, 4 s, 8 s
+            wait = 2 ** attempt
             logger.warning(
                 "DB connection attempt %d/%d failed (%s). Retrying in %ds...",
                 attempt, MAX_RETRIES, exc, wait,
