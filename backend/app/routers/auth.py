@@ -1,3 +1,5 @@
+import hashlib
+import random
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -10,19 +12,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.database import get_db
 from app.dependencies import get_current_user
+from app.models.password_reset import PasswordResetCode
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.schemas.user import (
     AppleAuthRequest,
+    ForgotPasswordRequest,
     GoogleAuthRequest,
     PushTokenRequest,
     RefreshRequest,
+    ResetPasswordRequest,
     TokenResponse,
     UserLogin,
     UserRegister,
     UserResponse,
     UserUpdate,
 )
+from app.services.email import send_password_reset_email
 from app.utils.security import (
     create_access_token,
     create_refresh_token,
@@ -191,6 +197,67 @@ async def update_me(
         setattr(user, key, value)
     await db.flush()
     return UserResponse.model_validate(user)
+
+
+@router.post("/forgot-password")
+async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    # Always return success to prevent email enumeration
+    result = await db.execute(select(User).where(User.email == data.email))
+    user = result.scalar_one_or_none()
+
+    if user:
+        # Invalidate previous codes for this user
+        old_codes = await db.execute(
+            select(PasswordResetCode).where(
+                PasswordResetCode.user_id == user.id,
+                PasswordResetCode.used == False,
+            )
+        )
+        for old in old_codes.scalars().all():
+            old.used = True
+
+        # Generate 6-digit code
+        code = f"{random.randint(0, 999999):06d}"
+        code_hash = hashlib.sha256(code.encode()).hexdigest()
+
+        reset_code = PasswordResetCode(
+            user_id=user.id,
+            code_hash=code_hash,
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=settings.password_reset_code_ttl_minutes),
+        )
+        db.add(reset_code)
+        await db.flush()
+
+        await send_password_reset_email(user.email, code)
+
+    return {"message": "Если аккаунт существует, код отправлен на почту"}
+
+
+@router.post("/reset-password")
+async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == data.email))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=400, detail="Неверный код")
+
+    code_hash = hashlib.sha256(data.code.encode()).hexdigest()
+    result = await db.execute(
+        select(PasswordResetCode).where(
+            PasswordResetCode.user_id == user.id,
+            PasswordResetCode.code_hash == code_hash,
+            PasswordResetCode.used == False,
+            PasswordResetCode.expires_at > datetime.now(timezone.utc),
+        )
+    )
+    reset_code = result.scalar_one_or_none()
+    if not reset_code:
+        raise HTTPException(status_code=400, detail="Неверный или истёкший код")
+
+    reset_code.used = True
+    user.password_hash = hash_password(data.new_password)
+    await db.flush()
+
+    return {"message": "Пароль успешно изменён"}
 
 
 @router.post("/push-token")

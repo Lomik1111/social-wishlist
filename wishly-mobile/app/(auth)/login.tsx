@@ -19,6 +19,7 @@ import Animated, {
 import { UnderlineInput } from '../../components/ui/UnderlineInput';
 import { PillButton } from '../../components/ui/PillButton';
 import { useAuthStore } from '../../store/authStore';
+import { useGoogleAuth } from '../../lib/googleAuth';
 import { haptic } from '../../lib/haptics';
 import { colors, typography, spacing } from '../../constants/design';
 
@@ -57,11 +58,24 @@ export default function LoginScreen() {
     }
   }, [email, password]);
 
+  const { promptAsync, isReady: isGoogleReady } = useGoogleAuth(
+    useCallback(async (idToken: string) => {
+      clearError();
+      try {
+        await loginWithGoogle(idToken);
+        router.replace('/(tabs)');
+      } catch {
+        triggerShake();
+        haptic.error();
+      }
+    }, [])
+  );
+
   const handleGoogleLogin = useCallback(async () => {
     haptic.medium();
-    // Google Sign-In will be integrated later via @react-native-google-signin
-    // For now this is a placeholder
-  }, []);
+    clearError();
+    await promptAsync();
+  }, [promptAsync]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -79,8 +93,8 @@ export default function LoginScreen() {
             <View style={styles.heartCircle}>
               <Text style={styles.heartIcon}>{'\u{1F497}'}</Text>
             </View>
-            <Text style={styles.title}>Social Wishlist</Text>
-            <Text style={styles.subtitle}>Curate your dreams.</Text>
+            <Text style={styles.title}>Wishly</Text>
+            <Text style={styles.subtitle}>{'Исполняй мечты вместе'}</Text>
           </View>
 
           {/* Glass card */}
@@ -113,7 +127,7 @@ export default function LoginScreen() {
               onRightIconPress={() => setShowPassword(!showPassword)}
             />
 
-            <Pressable style={styles.forgotRow}>
+            <Pressable style={styles.forgotRow} onPress={() => router.push('/(auth)/forgot-password')}>
               <Text style={styles.forgotText}>{'\u0417\u0430\u0431\u044B\u043B\u0438 \u043F\u0430\u0440\u043E\u043B\u044C?'}</Text>
             </Pressable>
 

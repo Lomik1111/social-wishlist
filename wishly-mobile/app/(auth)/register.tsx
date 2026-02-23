@@ -19,12 +19,13 @@ import Animated, {
 import { UnderlineInput } from '../../components/ui/UnderlineInput';
 import { PillButton } from '../../components/ui/PillButton';
 import { useAuthStore } from '../../store/authStore';
+import { useGoogleAuth } from '../../lib/googleAuth';
 import { haptic } from '../../lib/haptics';
 import { colors, typography, spacing } from '../../constants/design';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { register, isLoading, error, clearError } = useAuthStore();
+  const { register, loginWithGoogle, isLoading, error, clearError } = useAuthStore();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -58,6 +59,19 @@ export default function RegisterScreen() {
       haptic.error();
     }
   }, [email, password, fullName, username]);
+
+  const { promptAsync, isReady: isGoogleReady } = useGoogleAuth(
+    useCallback(async (idToken: string) => {
+      clearError();
+      try {
+        await loginWithGoogle(idToken);
+        router.replace('/(tabs)');
+      } catch {
+        triggerShake();
+        haptic.error();
+      }
+    }, [])
+  );
 
   const isFormValid = fullName.length > 0 && email.length > 0 && password.length > 0;
 
@@ -157,9 +171,10 @@ export default function RegisterScreen() {
             {/* Google button */}
             <Pressable
               style={styles.googleButton}
-              onPress={() => {
+              onPress={async () => {
                 haptic.medium();
-                // Google Sign-In will be integrated later
+                clearError();
+                await promptAsync();
               }}
             >
               <Text style={styles.googleIcon}>G</Text>
