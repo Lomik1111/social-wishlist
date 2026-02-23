@@ -79,7 +79,7 @@ export default function FriendProfileScreen() {
         setProfile(found);
         // Check if already friends
         const friendMatch = friends.find(
-          (f) => f.user?.id === found.id || f.user_id === found.id
+          (f) => f.user?.id === found.id
         );
         setIsFriend(!!friendMatch);
       }

@@ -24,7 +24,7 @@ export function Avatar({ uri, name, size = 44, showOnline = false, isOnline = fa
       ) : (
         <View style={[styles.fallback, containerStyle]}>
           <Text style={[styles.initials, { fontSize: size * 0.38 }]}>
-            {getInitials(name)}
+            {getInitials(name ?? null)}
           </Text>
         </View>
       )}
