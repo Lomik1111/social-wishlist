@@ -9,8 +9,10 @@ from app.models.notification import Notification
 from app.models.item_like import ItemLike
 from app.models.item_category import ItemCategory
 from app.models.wishlist_access import WishlistAccess
+from app.models.password_reset import PasswordResetCode
 
 __all__ = [
     "User", "Wishlist", "Item", "Reservation", "Contribution", "RefreshToken",
     "Friendship", "Notification", "ItemLike", "ItemCategory", "WishlistAccess",
+    "PasswordResetCode",
 ]

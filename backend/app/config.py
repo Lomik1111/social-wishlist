@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     apple_client_id: str = ""
     redis_url: str = ""
     expo_push_url: str = "https://exp.host/--/api/v2/push/send"
+    resend_api_key: str = ""
+    resend_from_email: str = "Wishly <onboarding@resend.dev>"
+    password_reset_code_ttl_minutes: int = 15
 
     class Config:
         env_file = ".env"

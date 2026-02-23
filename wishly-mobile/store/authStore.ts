@@ -27,6 +27,8 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, fullName?: string, username?: string) => Promise<void>;
   loginWithGoogle: (credential: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   updateProfile: (data: Partial<Pick<User, 'full_name' | 'username' | 'avatar_url' | 'bio' | 'theme' | 'biometrics_enabled'>>) => Promise<void>;
@@ -82,6 +84,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ user: data.user, isAuthenticated: true, isLoading: false });
     } catch (err: any) {
       const message = err.response?.data?.detail || 'Ошибка авторизации через Google';
+      set({ error: message, isLoading: false });
+      throw new Error(message);
+    }
+  },
+
+  forgotPassword: async (email) => {
+    set({ isLoading: true, error: null });
+    try {
+      await api.post('/auth/forgot-password', { email });
+      set({ isLoading: false });
+    } catch (err: any) {
+      const message = err.response?.data?.detail || 'Ошибка отправки кода';
+      set({ error: message, isLoading: false });
+      throw new Error(message);
+    }
+  },
+
+  resetPassword: async (email, code, newPassword) => {
+    set({ isLoading: true, error: null });
+    try {
+      await api.post('/auth/reset-password', { email, code, new_password: newPassword });
+      set({ isLoading: false });
+    } catch (err: any) {
+      const message = err.response?.data?.detail || 'Ошибка сброса пароля';
       set({ error: message, isLoading: false });
       throw new Error(message);
     }

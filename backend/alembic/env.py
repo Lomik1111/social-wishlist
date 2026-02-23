@@ -50,7 +50,7 @@ def run_migrations_offline():
         context.run_migrations()
 
 
-KNOWN_REVISIONS = {'001_full_schema'}
+KNOWN_REVISIONS = {'001_full_schema', '002_password_reset'}
 
 
 def do_run_migrations(connection):
