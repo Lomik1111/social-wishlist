@@ -5,7 +5,8 @@ import logging
 from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
 from logging.config import fileConfig
 from sqlalchemy import pool
-from sqlalchemy.ext.asyncio import async_engine_from_config
+import logging
+from sqlalchemy.ext.asyncio import async_engine_from_config, create_async_engine
 from alembic import context
 
 logger = logging.getLogger("alembic.env")
@@ -71,6 +72,11 @@ def do_run_migrations(connection):
         context.run_migrations()
 
 
+logger = logging.getLogger("alembic.env")
+
+MAX_RETRIES = 5
+
+
 async def run_async_migrations():
     connect_args = {}
     if ".railway.internal" in database_url:
@@ -99,12 +105,10 @@ async def run_async_migrations():
                 raise
             wait = 2 ** attempt
             logger.warning(
-                "DB connection attempt %d/%d failed (%s), retrying in %ds...",
-                attempt, max_retries, e, wait,
+                "DB connection attempt %d/%d failed (%s). Retrying in %ds...",
+                attempt, MAX_RETRIES, exc, wait,
             )
             await asyncio.sleep(wait)
-
-    await connectable.dispose()
 
 
 def run_migrations_online():
