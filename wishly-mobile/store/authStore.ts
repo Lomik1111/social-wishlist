@@ -12,6 +12,7 @@ interface User {
   is_premium: boolean;
   is_online: boolean;
   theme: string;
+  biometrics_enabled: boolean;
   google_id: string | null;
   apple_id: string | null;
   created_at: string;
