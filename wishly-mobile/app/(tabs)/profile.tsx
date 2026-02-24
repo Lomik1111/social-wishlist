@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
+import type { Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -106,8 +107,6 @@ export default function ProfileScreen() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
 
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-
   const handleLogout = useCallback(() => {
     haptic.warning();
     Alert.alert('Выход', 'Вы уверены, что хотите выйти?', [
@@ -123,14 +122,10 @@ export default function ProfileScreen() {
     ]);
   }, [logout, router]);
 
-  const handleNotificationToggle = useCallback((val: boolean) => {
-    setNotificationsEnabled(val);
-  }, []);
-
   const navigateTo = useCallback(
     (path: string) => {
       haptic.light();
-      router.push(path as any);
+      router.push(path as Href);
     },
     [router],
   );
@@ -210,10 +205,7 @@ export default function ProfileScreen() {
           <SettingRow
             icon="🔔"
             title="Уведомления"
-            isToggle
-            toggleValue={notificationsEnabled}
-            onToggle={handleNotificationToggle}
-            showChevron={false}
+            onPress={() => navigateTo('/notifications')}
           />
           <View style={styles.separator} />
           <SettingRow

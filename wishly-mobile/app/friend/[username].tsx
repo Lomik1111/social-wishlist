@@ -9,6 +9,7 @@ import {
   Dimensions,
   RefreshControl,
   Image,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,32 +23,11 @@ import { pluralize } from '../../lib/utils';
 import api from '../../lib/api';
 import { useFriendStore } from '../../store/friendStore';
 import { useAuthStore } from '../../store/authStore';
+import type { UserProfile, PublicWishlist, WishlistPublic } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;
 const CARD_WIDTH = (SCREEN_WIDTH - spacing.xl * 2 - CARD_GAP) / 2;
-
-interface UserProfile {
-  id: string;
-  full_name: string | null;
-  username: string | null;
-  avatar_url: string | null;
-  bio: string | null;
-  is_premium: boolean;
-  is_online: boolean;
-  friends_count?: number;
-  wishlists_count?: number;
-  gifts_count?: number;
-}
-
-interface PublicWishlist {
-  id: string;
-  title: string;
-  description: string | null;
-  theme: string;
-  item_count: number;
-  items?: { image_url: string | null; name: string }[];
-}
 
 const OCCASION_EMOJIS: Record<string, string> = {
   birthday: '\uD83C\uDF82',
@@ -61,6 +41,11 @@ const OCCASION_EMOJIS: Record<string, string> = {
 export default function FriendProfileScreen() {
   const router = useRouter();
   const { username } = useLocalSearchParams<{ username: string }>();
+  useEffect(() => {
+    if (!username || !/^[a-zA-Z0-9_]{3,50}$/.test(username)) {
+      router.replace('/(tabs)');
+    }
+  }, [username]);
   const { friends, sendRequest, removeFriend } = useFriendStore();
   const currentUser = useAuthStore((s) => s.user);
 
@@ -84,7 +69,7 @@ export default function FriendProfileScreen() {
         setIsFriend(!!friendMatch);
       }
     } catch {
-      // Profile not found
+      Alert.alert('Ошибка', 'Не удалось загрузить профиль');
     }
   }, [username, friends]);
 
@@ -94,11 +79,11 @@ export default function FriendProfileScreen() {
       const { data } = await api.get(`/wishlists/friends`);
       // Filter wishlists belonging to this user
       const userWishlists = data.filter(
-        (w: any) => w.owner_username === username
+        (w: WishlistPublic) => w.owner_username === username
       );
       setWishlists(userWishlists);
     } catch {
-      // Wishlists not available
+      Alert.alert('Ошибка', 'Не удалось загрузить списки');
     }
   }, [username]);
 
@@ -136,6 +121,7 @@ export default function FriendProfileScreen() {
       }
     } catch {
       haptic.error();
+      Alert.alert('Ошибка', 'Не удалось выполнить действие');
     }
   }, [profile, isFriend, removeFriend, sendRequest]);
 

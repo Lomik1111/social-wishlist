@@ -1,10 +1,9 @@
 import hashlib
-import random
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
-from google.auth.transport.requests import Request
+from fastapi import APIRouter, Depends, HTTPException, Request
+from google.auth.transport.requests import Request as GoogleRequest
 from google.oauth2 import id_token
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,11 +33,15 @@ from app.utils.security import (
     create_refresh_token,
     decode_token,
     hash_password,
+    hash_token,
     verify_password,
 )
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter()
 settings = get_settings()
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/google/config-status")
@@ -55,7 +58,7 @@ async def google_auth(data: GoogleAuthRequest, db: AsyncSession = Depends(get_db
         raise HTTPException(status_code=503, detail="Google auth не настроен")
 
     try:
-        payload = id_token.verify_oauth2_token(data.credential, Request(), settings.google_client_id)
+        payload = id_token.verify_oauth2_token(data.credential, GoogleRequest(), settings.google_client_id)
     except Exception as exc:
         raise HTTPException(status_code=401, detail="Неверные данные Google") from exc
 
@@ -94,7 +97,8 @@ async def apple_auth(data: AppleAuthRequest, db: AsyncSession = Depends(get_db))
 
 
 @router.post("/register", response_model=TokenResponse)
-async def register(data: UserRegister, db: AsyncSession = Depends(get_db)):
+@limiter.limit("3/minute")
+async def register(request: Request, data: UserRegister, db: AsyncSession = Depends(get_db)):
     existing = await db.execute(select(User).where(User.email == data.email))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
@@ -117,7 +121,8 @@ async def register(data: UserRegister, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def login(request: Request, data: UserLogin, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
     if not user or not user.password_hash or not verify_password(data.password, user.password_hash):
@@ -132,7 +137,7 @@ async def _issue_tokens(db: AsyncSession, user: User) -> TokenResponse:
 
     rt = RefreshToken(
         user_id=user.id,
-        token=refresh,
+        token=hash_token(refresh),
         expires_at=datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days),
     )
     db.add(rt)
@@ -146,8 +151,9 @@ async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(status_code=401, detail="Неверный refresh-токен")
 
+    token_hash = hash_token(data.refresh_token)
     result = await db.execute(
-        select(RefreshToken).where(RefreshToken.token == data.refresh_token)
+        select(RefreshToken).where(RefreshToken.token == token_hash)
     )
     rt = result.scalar_one_or_none()
     if not rt or rt.expires_at < datetime.now(timezone.utc):
@@ -160,7 +166,7 @@ async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
 
     new_rt = RefreshToken(
         user_id=rt.user_id,
-        token=new_refresh,
+        token=hash_token(new_refresh),
         expires_at=datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days),
     )
     db.add(new_rt)
@@ -170,7 +176,8 @@ async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
 
 @router.post("/logout")
 async def logout(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(RefreshToken).where(RefreshToken.token == data.refresh_token))
+    token_hash = hash_token(data.refresh_token)
+    result = await db.execute(select(RefreshToken).where(RefreshToken.token == token_hash))
     rt = result.scalar_one_or_none()
     if rt:
         await db.delete(rt)
@@ -200,7 +207,8 @@ async def update_me(
 
 
 @router.post("/forgot-password")
-async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("3/minute")
+async def forgot_password(request: Request, data: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
     # Always return success to prevent email enumeration
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
@@ -217,7 +225,7 @@ async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depend
             old.used = True
 
         # Generate 6-digit code
-        code = f"{random.randint(0, 999999):06d}"
+        code = f"{secrets.randbelow(900000) + 100000}"
         code_hash = hashlib.sha256(code.encode()).hexdigest()
 
         reset_code = PasswordResetCode(
@@ -234,7 +242,8 @@ async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depend
 
 
 @router.post("/reset-password")
-async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def reset_password(request: Request, data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
     if not user:
@@ -272,18 +281,22 @@ async def save_push_token(
 
 
 @router.get("/users/search")
+@limiter.limit("20/minute")
 async def search_users(
+    request: Request,
     q: str,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if len(q) < 2:
+    if len(q) < 2 or len(q) > 100:
         return []
+    # Escape LIKE wildcards
+    safe_q = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     result = await db.execute(
         select(User)
         .where(
             User.id != user.id,
-            (User.username.ilike(f"%{q}%")) | (User.full_name.ilike(f"%{q}%"))
+            (User.username.ilike(f"%{safe_q}%")) | (User.full_name.ilike(f"%{safe_q}%"))
         )
         .limit(20)
     )

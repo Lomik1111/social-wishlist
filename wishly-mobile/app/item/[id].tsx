@@ -11,6 +11,7 @@ import {
   Linking,
   Share,
   Alert,
+  DimensionValue,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -38,37 +39,22 @@ import {
 import { formatPrice, extractDomain } from '../../lib/utils';
 import { haptic } from '../../lib/haptics';
 import api from '../../lib/api';
-type Item = {
-  id: string;
-  wishlist_id: string;
-  name: string;
-  description: string | null;
-  url: string | null;
-  image_url: string | null;
-  price: number | null;
-  currency: string;
-  source_domain: string | null;
-  is_group_gift: boolean;
-  priority: string;
-  sort_order: number;
-  is_liked_by_owner: boolean;
-  like_count: number;
-  is_reserved: boolean;
-  reservation_count: number;
-  contribution_total: number;
-  contribution_count: number;
-  progress_percentage: number;
-  created_at: string;
-};
+import type { Item } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = 340;
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default function ItemDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  useEffect(() => {
+    if (!id || !UUID_REGEX.test(id)) {
+      router.replace('/(tabs)');
+    }
+  }, [id]);
 
   const currentItems = useWishlistStore((s) => s.currentItems);
 
@@ -166,8 +152,16 @@ export default function ItemDetailScreen() {
 
   const handleOpenExternal = useCallback(() => {
     if (!item?.url) return;
-    haptic.light();
-    Linking.openURL(item.url);
+    try {
+      const parsed = new URL(item.url);
+      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+        return;
+      }
+      haptic.light();
+      Linking.openURL(item.url);
+    } catch {
+      // Invalid URL — do nothing
+    }
   }, [item]);
 
   const handleSliderChange = useCallback(
@@ -210,11 +204,12 @@ export default function ItemDetailScreen() {
       Alert.alert('Готово!', 'Подарок успешно забронирован', [
         { text: 'OK', onPress: () => router.back() },
       ]);
-    } catch (err: any) {
+    } catch (err) {
       haptic.error();
+      const axiosError = err as import('axios').AxiosError<{ detail?: string }>;
       Alert.alert(
         'Ошибка',
-        err.response?.data?.detail || 'Не удалось забронировать'
+        axiosError.response?.data?.detail || 'Не удалось забронировать'
       );
     } finally {
       setReserving(false);
@@ -384,7 +379,7 @@ export default function ItemDetailScreen() {
                       <View
                         style={[
                           styles.sliderFill,
-                          { width: `${sliderValue}%` as any },
+                          { width: `${sliderValue}%` as DimensionValue },
                         ]}
                       />
                     </View>

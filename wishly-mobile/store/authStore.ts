@@ -13,8 +13,8 @@ interface User {
   is_online: boolean;
   theme: string;
   biometrics_enabled: boolean;
-  google_id: string | null;
-  apple_id: string | null;
+  has_google: boolean;
+  has_apple: boolean;
   created_at: string;
 }
 
@@ -49,8 +49,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await SecureStore.setItemAsync('access_token', data.access_token);
       await SecureStore.setItemAsync('refresh_token', data.refresh_token);
       set({ user: data.user, isAuthenticated: true, isLoading: false });
-    } catch (err: any) {
-      const message = err.response?.data?.detail || 'Ошибка входа';
+    } catch (err) {
+      const axiosError = err as import('axios').AxiosError<{ detail?: string }>;
+      const message = axiosError.response?.data?.detail || 'Ошибка входа';
       set({ error: message, isLoading: false });
       throw new Error(message);
     }
@@ -68,8 +69,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await SecureStore.setItemAsync('access_token', data.access_token);
       await SecureStore.setItemAsync('refresh_token', data.refresh_token);
       set({ user: data.user, isAuthenticated: true, isLoading: false });
-    } catch (err: any) {
-      const message = err.response?.data?.detail || 'Ошибка регистрации';
+    } catch (err) {
+      const axiosError = err as import('axios').AxiosError<{ detail?: string }>;
+      const message = axiosError.response?.data?.detail || 'Ошибка регистрации';
       set({ error: message, isLoading: false });
       throw new Error(message);
     }
@@ -82,8 +84,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await SecureStore.setItemAsync('access_token', data.access_token);
       await SecureStore.setItemAsync('refresh_token', data.refresh_token);
       set({ user: data.user, isAuthenticated: true, isLoading: false });
-    } catch (err: any) {
-      const message = err.response?.data?.detail || 'Ошибка авторизации через Google';
+    } catch (err) {
+      const axiosError = err as import('axios').AxiosError<{ detail?: string }>;
+      const message = axiosError.response?.data?.detail || 'Ошибка авторизации через Google';
       set({ error: message, isLoading: false });
       throw new Error(message);
     }
@@ -94,8 +97,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await api.post('/auth/forgot-password', { email });
       set({ isLoading: false });
-    } catch (err: any) {
-      const message = err.response?.data?.detail || 'Ошибка отправки кода';
+    } catch (err) {
+      const axiosError = err as import('axios').AxiosError<{ detail?: string }>;
+      const message = axiosError.response?.data?.detail || 'Ошибка отправки кода';
       set({ error: message, isLoading: false });
       throw new Error(message);
     }
@@ -106,8 +110,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await api.post('/auth/reset-password', { email, code, new_password: newPassword });
       set({ isLoading: false });
-    } catch (err: any) {
-      const message = err.response?.data?.detail || 'Ошибка сброса пароля';
+    } catch (err) {
+      const axiosError = err as import('axios').AxiosError<{ detail?: string }>;
+      const message = axiosError.response?.data?.detail || 'Ошибка сброса пароля';
       set({ error: message, isLoading: false });
       throw new Error(message);
     }
@@ -115,9 +120,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     try {
-      await api.post('/auth/logout');
+      const refreshToken = await SecureStore.getItemAsync('refresh_token');
+      if (refreshToken) {
+        await api.post('/auth/logout', { refresh_token: refreshToken });
+      }
     } catch {
-      // Ignore logout API errors
+      // Ignore logout API errors — tokens will be cleared locally regardless
     }
     await SecureStore.deleteItemAsync('access_token');
     await SecureStore.deleteItemAsync('refresh_token');
@@ -128,8 +136,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const { data } = await api.get('/auth/me');
       set({ user: data });
-    } catch {
-      // Silently fail
+    } catch (err) {
+      const axiosError = err as import('axios').AxiosError;
+      if (axiosError.code === 'ERR_NETWORK') {
+        set({ error: 'Нет подключения к интернету' });
+      }
     }
   },
 
@@ -138,8 +149,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const { data } = await api.patch('/auth/me', profileData);
       set({ user: data, isLoading: false });
-    } catch (err: any) {
-      const message = err.response?.data?.detail || 'Ошибка обновления профиля';
+    } catch (err) {
+      const axiosError = err as import('axios').AxiosError<{ detail?: string }>;
+      const message = axiosError.response?.data?.detail || 'Ошибка обновления профиля';
       set({ error: message, isLoading: false });
       throw new Error(message);
     }

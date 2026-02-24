@@ -50,7 +50,7 @@ def run_migrations_offline():
         context.run_migrations()
 
 
-KNOWN_REVISIONS = {'001_full_schema', '002_password_reset'}
+KNOWN_REVISIONS = {'001_full_schema', '002_password_reset', '002_indexes_constraints'}
 
 
 def do_run_migrations(connection):
@@ -106,7 +106,7 @@ async def run_async_migrations():
             wait = 2 ** attempt
             logger.warning(
                 "DB connection attempt %d/%d failed (%s). Retrying in %ds...",
-                attempt, MAX_RETRIES, exc, wait,
+                attempt, MAX_RETRIES, e, wait,
             )
             await asyncio.sleep(wait)
 

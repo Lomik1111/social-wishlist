@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
+import type { Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -61,7 +62,7 @@ const FavoriteCard = React.memo(function FavoriteCard({
 
   const handlePress = useCallback(() => {
     haptic.light();
-    router.push(`/item/${item.id}` as any);
+    router.push(`/item/${item.id}` as Href);
   }, [item.id, router]);
 
   return (

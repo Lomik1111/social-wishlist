@@ -18,21 +18,9 @@ import { haptic } from '../../lib/haptics';
 import { timeAgo } from '../../lib/utils';
 import api from '../../lib/api';
 import { colors, spacing, radius, typography } from '../../constants/design';
+import type { Reservation } from '../../types';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-// ---------- Types ----------
-interface Reservation {
-  id: string;
-  item_id: string;
-  item_name: string;
-  item_image_url: string | null;
-  item_price: number | null;
-  wishlist_title: string;
-  wishlist_owner_name: string;
-  is_purchased: boolean;
-  created_at: string;
-}
 
 // ---------- ReservationCard ----------
 const ReservationCard = React.memo(function ReservationCard({
@@ -128,7 +116,7 @@ export default function ReservationsScreen() {
       const { data } = await api.get('/reservations/mine');
       setReservations(data);
     } catch {
-      // Silently handle
+      Alert.alert('Ошибка', 'Не удалось загрузить бронирования');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -152,6 +140,7 @@ export default function ReservationsScreen() {
         setReservations((prev) => prev.filter((r) => r.id !== id));
       } catch {
         haptic.error();
+        Alert.alert('Ошибка', 'Не удалось отменить бронирование');
       }
     },
     [],

@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -48,15 +49,24 @@ export default function LoginScreen() {
 
   const handleLogin = useCallback(async () => {
     clearError();
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !trimmedEmail.includes('@')) {
+      Alert.alert('Ошибка', 'Введите корректный email');
+      return;
+    }
+    if (password.length < 8 || password.length > 128) {
+      Alert.alert('Ошибка', 'Пароль должен содержать от 8 до 128 символов');
+      return;
+    }
     haptic.medium();
     try {
-      await login(email.trim(), password);
+      await login(trimmedEmail, password);
       router.replace('/(tabs)');
     } catch {
       triggerShake();
       haptic.error();
     }
-  }, [email, password]);
+  }, [email, password, login, clearError, router]);
 
   const { promptAsync, isReady: isGoogleReady } = useGoogleAuth(
     useCallback(async (idToken: string) => {
@@ -68,7 +78,7 @@ export default function LoginScreen() {
         triggerShake();
         haptic.error();
       }
-    }, [])
+    }, [loginWithGoogle, clearError, router])
   );
 
   const handleGoogleLogin = useCallback(async () => {

@@ -8,8 +8,9 @@ export interface User {
   is_premium: boolean;
   is_online: boolean;
   theme: string;
-  google_id: string | null;
-  apple_id: string | null;
+  has_google: boolean;
+  has_apple: boolean;
+  biometrics_enabled: boolean;
   created_at: string;
 }
 
@@ -171,6 +172,21 @@ export interface AutofillResult {
   currency: string;
   source_domain: string | null;
   error: string | null;
+}
+
+export interface UserProfile extends UserPublic {
+  friends_count?: number;
+  wishlists_count?: number;
+  gifts_count?: number;
+}
+
+export interface PublicWishlist {
+  id: string;
+  title: string;
+  description: string | null;
+  theme: string;
+  item_count: number;
+  items?: { image_url: string | null; name: string }[];
 }
 
 export interface WishlistTheme {

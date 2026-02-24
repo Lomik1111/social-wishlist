@@ -35,7 +35,7 @@ class WebSocketManager:
         try:
             await websocket.send_text(json.dumps(message))
         except Exception:
-            pass
+            pass  # Client already disconnected — safe to ignore
 
 
 ws_manager = WebSocketManager()

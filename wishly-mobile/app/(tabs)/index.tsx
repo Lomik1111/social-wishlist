@@ -62,13 +62,10 @@ export default function DashboardScreen() {
     haptic.heavy();
     fabScale.value = withSpring(0.9, { damping: 15 });
     setTimeout(() => {
-      fabScale.value = withSpring(1.1, { damping: 10 });
-      setTimeout(() => {
-        fabScale.value = withSpring(1, { damping: 15 });
-        router.push('/wishlist/create');
-      }, 100);
-    }, 100);
-  }, []);
+      fabScale.value = withSpring(1, { damping: 15 });
+      router.push('/wishlist/create');
+    }, 200);
+  }, [router]);
 
   const [refreshing, setRefreshing] = React.useState(false);
   const onRefresh = useCallback(async () => {

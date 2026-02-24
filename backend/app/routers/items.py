@@ -2,7 +2,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update, case
 from app.database import get_db
 from app.models.user import User
 from app.models.wishlist import Wishlist
@@ -39,8 +39,11 @@ async def create_item(
     db.add(item)
     await db.flush()
 
-    # Update counter
-    wishlist.item_count = wishlist.item_count + 1
+    # Update counter atomically
+    await db.execute(
+        update(Wishlist).where(Wishlist.id == wishlist_id)
+        .values(item_count=Wishlist.item_count + 1)
+    )
 
     await ws_manager.broadcast(str(wishlist_id), {
         "type": "item_added",
@@ -93,11 +96,14 @@ async def delete_item(
     await db.delete(item)
     await db.flush()
 
-    # Update counter
-    wl = await db.execute(select(Wishlist).where(Wishlist.id == wishlist_id))
-    wishlist = wl.scalar_one_or_none()
-    if wishlist:
-        wishlist.item_count = max(0, wishlist.item_count - 1)
+    # Update counter atomically
+    await db.execute(
+        update(Wishlist).where(Wishlist.id == wishlist_id)
+        .values(item_count=case(
+            (Wishlist.item_count > 0, Wishlist.item_count - 1),
+            else_=0
+        ))
+    )
 
     await ws_manager.broadcast(str(wishlist_id), {
         "type": "item_deleted",

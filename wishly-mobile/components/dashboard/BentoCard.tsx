@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   progressWrapper: {
-    marginTop: 'auto' as any,
+    marginTop: 'auto' as const,
     paddingTop: spacing.sm,
   },
 });

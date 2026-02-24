@@ -1,28 +1,7 @@
 import { create } from 'zustand';
+import type { AxiosError } from 'axios';
 import api from '../lib/api';
-
-interface UserPublic {
-  id: string;
-  full_name: string | null;
-  username: string | null;
-  avatar_url: string | null;
-  bio: string | null;
-  is_premium: boolean;
-  is_online: boolean;
-}
-
-interface Friendship {
-  id: string;
-  user: UserPublic;
-  status: string;
-  created_at: string;
-}
-
-interface FriendRequest {
-  id: string;
-  requester: UserPublic;
-  created_at: string;
-}
+import type { UserPublic, Friendship, FriendRequest } from '../types';
 
 interface FriendState {
   friends: Friendship[];
@@ -53,8 +32,9 @@ export const useFriendStore = create<FriendState>((set) => ({
     try {
       const { data } = await api.get('/friends');
       set({ friends: data, isLoading: false });
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка загрузки', isLoading: false });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка загрузки', isLoading: false });
     }
   },
 
@@ -62,8 +42,9 @@ export const useFriendStore = create<FriendState>((set) => ({
     try {
       const { data } = await api.get('/friends/requests');
       set({ requests: data });
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка загрузки' });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка загрузки' });
     }
   },
 
@@ -75,16 +56,18 @@ export const useFriendStore = create<FriendState>((set) => ({
     try {
       const { data } = await api.get('/users/search', { params: { q: query } });
       set({ searchResults: data });
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка поиска' });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка поиска' });
     }
   },
 
   sendRequest: async (userId) => {
     try {
       await api.post(`/friends/request/${userId}`);
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка отправки запроса' });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка отправки запроса' });
       throw err;
     }
   },
@@ -95,8 +78,9 @@ export const useFriendStore = create<FriendState>((set) => ({
       set((state) => ({
         requests: state.requests.filter((r) => r.requester.id !== userId),
       }));
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка принятия запроса' });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка принятия запроса' });
       throw err;
     }
   },
@@ -107,8 +91,9 @@ export const useFriendStore = create<FriendState>((set) => ({
       set((state) => ({
         friends: state.friends.filter((f) => f.user.id !== userId),
       }));
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка удаления' });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка удаления' });
       throw err;
     }
   },

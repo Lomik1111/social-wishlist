@@ -18,6 +18,27 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    conn = op.get_bind()
+    # Safety: refuse to drop tables if they already contain data
+    result = conn.execute(sa.text(
+        "SELECT EXISTS (SELECT 1 FROM information_schema.tables "
+        "WHERE table_schema = 'public' AND table_name = 'users')"
+    ))
+    if result.scalar():
+        # Check if it has data
+        try:
+            count = conn.execute(sa.text("SELECT COUNT(*) FROM users")).scalar()
+            if count and count > 0:
+                raise RuntimeError(
+                    "Refusing to drop existing tables with data. "
+                    "This migration is for initial setup only. "
+                    f"Found {count} users in the database."
+                )
+        except Exception as e:
+            if "RuntimeError" in str(type(e)):
+                raise
+            pass  # Table might not be accessible, proceed with migration
+
     # Drop old tables if they exist (order matters for FK constraints)
     op.execute("DROP TABLE IF EXISTS refresh_tokens CASCADE")
     op.execute("DROP TABLE IF EXISTS contributions CASCADE")

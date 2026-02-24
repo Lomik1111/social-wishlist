@@ -1,54 +1,13 @@
 import { create } from 'zustand';
+import type { AxiosError } from 'axios';
 import api from '../lib/api';
-
-interface Wishlist {
-  id: string;
-  owner_id: string;
-  title: string;
-  description: string | null;
-  occasion: string | null;
-  event_date: string | null;
-  share_token: string;
-  is_active: boolean;
-  theme: string;
-  cover_image_url: string | null;
-  privacy: string;
-  show_prices: boolean;
-  anonymous_reservations: boolean;
-  notifications_enabled: boolean;
-  item_count: number;
-  reserved_count: number;
-  created_at: string;
-}
-
-interface Item {
-  id: string;
-  wishlist_id: string;
-  name: string;
-  description: string | null;
-  url: string | null;
-  image_url: string | null;
-  price: number | null;
-  currency: string;
-  source_domain: string | null;
-  is_group_gift: boolean;
-  priority: string;
-  sort_order: number;
-  is_liked_by_owner: boolean;
-  like_count: number;
-  is_reserved: boolean;
-  reservation_count: number;
-  contribution_total: number;
-  contribution_count: number;
-  progress_percentage: number;
-  created_at: string;
-}
+import type { Wishlist, Item, WishlistPublic } from '../types';
 
 interface WishlistState {
   wishlists: Wishlist[];
   currentWishlist: Wishlist | null;
   currentItems: Item[];
-  friendsWishlists: any[];
+  friendsWishlists: WishlistPublic[];
   isLoading: boolean;
   error: string | null;
 
@@ -78,8 +37,9 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
     try {
       const { data } = await api.get('/wishlists');
       set({ wishlists: data, isLoading: false });
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка загрузки', isLoading: false });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка загрузки', isLoading: false });
     }
   },
 
@@ -88,17 +48,20 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
     try {
       const { data } = await api.get(`/wishlists/${id}`);
       set({ currentWishlist: data, isLoading: false });
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка загрузки', isLoading: false });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка загрузки', isLoading: false });
     }
   },
 
   fetchWishlistItems: async (wishlistId) => {
+    set({ isLoading: true });
     try {
       const { data } = await api.get(`/wishlists/${wishlistId}/items`);
-      set({ currentItems: data });
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка загрузки' });
+      set({ currentItems: data, isLoading: false });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка загрузки', isLoading: false });
     }
   },
 
@@ -108,8 +71,9 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
       const { data } = await api.post('/wishlists', createData);
       set((state) => ({ wishlists: [data, ...state.wishlists], isLoading: false }));
       return data;
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка создания', isLoading: false });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка создания', isLoading: false });
       throw err;
     }
   },
@@ -121,8 +85,9 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
         wishlists: state.wishlists.map((w) => (w.id === id ? data : w)),
         currentWishlist: state.currentWishlist?.id === id ? data : state.currentWishlist,
       }));
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка обновления' });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка обновления' });
     }
   },
 
@@ -133,8 +98,9 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
         wishlists: state.wishlists.filter((w) => w.id !== id),
         currentWishlist: state.currentWishlist?.id === id ? null : state.currentWishlist,
       }));
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка удаления' });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка удаления' });
     }
   },
 
@@ -143,8 +109,9 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
       const { data } = await api.post(`/wishlists/${wishlistId}/items`, itemData);
       set((state) => ({ currentItems: [...state.currentItems, data] }));
       return data;
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка добавления' });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка добавления' });
       throw err;
     }
   },
@@ -155,8 +122,9 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
       set((state) => ({
         currentItems: state.currentItems.map((i) => (i.id === itemId ? data : i)),
       }));
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка обновления' });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка обновления' });
     }
   },
 
@@ -166,8 +134,9 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
       set((state) => ({
         currentItems: state.currentItems.filter((i) => i.id !== itemId),
       }));
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка удаления' });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка удаления' });
     }
   },
 
@@ -175,8 +144,9 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
     try {
       const { data } = await api.get('/wishlists/friends');
       set({ friendsWishlists: data });
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка загрузки' });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка загрузки' });
     }
   },
 

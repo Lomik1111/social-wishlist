@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -50,15 +51,31 @@ export default function RegisterScreen() {
 
   const handleRegister = useCallback(async () => {
     clearError();
+    const trimmedEmail = email.trim();
+    const trimmedUsername = username.trim();
+    const trimmedFullName = fullName.trim();
+
+    if (!trimmedEmail || !trimmedEmail.includes('@')) {
+      Alert.alert('Ошибка', 'Введите корректный email');
+      return;
+    }
+    if (password.length < 8 || password.length > 128) {
+      Alert.alert('Ошибка', 'Пароль должен содержать от 8 до 128 символов');
+      return;
+    }
+    if (trimmedUsername && (trimmedUsername.length < 3 || !/^[a-zA-Z0-9_]+$/.test(trimmedUsername))) {
+      Alert.alert('Ошибка', 'Username: от 3 символов, только буквы, цифры и _');
+      return;
+    }
     haptic.medium();
     try {
-      await register(email.trim(), password, fullName.trim(), username.trim());
+      await register(trimmedEmail, password, trimmedFullName || undefined, trimmedUsername || undefined);
       router.replace('/(tabs)');
     } catch {
       triggerShake();
       haptic.error();
     }
-  }, [email, password, fullName, username]);
+  }, [email, password, fullName, username, register, clearError, router]);
 
   const { promptAsync, isReady: isGoogleReady } = useGoogleAuth(
     useCallback(async (idToken: string) => {
@@ -70,7 +87,7 @@ export default function RegisterScreen() {
         triggerShake();
         haptic.error();
       }
-    }, [])
+    }, [loginWithGoogle, clearError, router])
   );
 
   const isFormValid = fullName.length > 0 && email.length > 0 && password.length > 0;

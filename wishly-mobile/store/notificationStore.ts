@@ -1,17 +1,7 @@
 import { create } from 'zustand';
+import type { AxiosError } from 'axios';
 import api from '../lib/api';
-
-interface Notification {
-  id: string;
-  recipient_id: string;
-  sender_id: string | null;
-  type: string;
-  title: string | null;
-  body: string | null;
-  data: Record<string, unknown>;
-  is_read: boolean;
-  created_at: string;
-}
+import type { Notification } from '../types';
 
 interface NotificationState {
   notifications: Notification[];
@@ -38,8 +28,9 @@ export const useNotificationStore = create<NotificationState>((set) => ({
       const { data } = await api.get('/notifications', { params });
       const unread = data.filter((n: Notification) => !n.is_read).length;
       set({ notifications: data, unreadCount: unread, isLoading: false });
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка загрузки', isLoading: false });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка загрузки', isLoading: false });
     }
   },
 
@@ -50,8 +41,9 @@ export const useNotificationStore = create<NotificationState>((set) => ({
         notifications: state.notifications.map((n) => ({ ...n, is_read: true })),
         unreadCount: 0,
       }));
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка' });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка' });
     }
   },
 
@@ -62,8 +54,9 @@ export const useNotificationStore = create<NotificationState>((set) => ({
         notifications: state.notifications.filter((n) => n.id !== id),
         unreadCount: state.unreadCount - (state.notifications.find((n) => n.id === id && !n.is_read) ? 1 : 0),
       }));
-    } catch (err: any) {
-      set({ error: err.response?.data?.detail || 'Ошибка удаления' });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      set({ error: axiosError.response?.data?.detail || 'Ошибка удаления' });
     }
   },
 

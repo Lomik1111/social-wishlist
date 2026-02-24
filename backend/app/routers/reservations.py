@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import select
+from sqlalchemy import select, update, case
 from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.models.user import User
@@ -96,8 +96,11 @@ async def reserve_item(
         await db.rollback()
         raise HTTPException(status_code=409, detail="Конфликт бронирования")
 
-    # Update counter
-    wishlist.reserved_count = wishlist.reserved_count + 1
+    # Update counter atomically
+    await db.execute(
+        update(Wishlist).where(Wishlist.id == item.wishlist_id)
+        .values(reserved_count=Wishlist.reserved_count + 1)
+    )
 
     await ws_manager.broadcast(str(item.wishlist_id), {
         "type": "item_reserved",
@@ -177,6 +180,15 @@ async def unreserve_item(
 
     await db.delete(reservation)
     await db.flush()
+
+    # Decrement counter atomically
+    await db.execute(
+        update(Wishlist).where(Wishlist.id == item.wishlist_id)
+        .values(reserved_count=case(
+            (Wishlist.reserved_count > 0, Wishlist.reserved_count - 1),
+            else_=0
+        ))
+    )
 
     await ws_manager.broadcast(str(item.wishlist_id), {
         "type": "item_unreserved",

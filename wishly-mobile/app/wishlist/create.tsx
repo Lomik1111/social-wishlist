@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,6 @@ import Animated, {
   useAnimatedStyle,
   withRepeat,
   withTiming,
-  withSpring,
   Easing,
 } from 'react-native-reanimated';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -83,7 +82,6 @@ export default function CreateWishlistScreen() {
   const [itemDescription, setItemDescription] = useState('');
   const [itemPrice, setItemPrice] = useState('');
   const [itemImageUrl, setItemImageUrl] = useState('');
-  const [itemNote, setItemNote] = useState('');
   const [addingItem, setAddingItem] = useState(false);
 
   // ---- Scanning animation ----
@@ -108,18 +106,36 @@ export default function CreateWishlistScreen() {
 
   // ---- Handlers ----
   const handleCreateWishlist = useCallback(async () => {
-    if (!title.trim()) {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
       Alert.alert('Ошибка', 'Введите название вишлиста');
       return;
+    }
+    if (trimmedTitle.length > 200) {
+      Alert.alert('Ошибка', 'Название не может быть длиннее 200 символов');
+      return;
+    }
+
+    const trimmedDate = eventDate.trim();
+    if (trimmedDate && !/^\d{4}-\d{2}-\d{2}$/.test(trimmedDate)) {
+      Alert.alert('Ошибка', 'Дата должна быть в формате ГГГГ-ММ-ДД');
+      return;
+    }
+    if (trimmedDate) {
+      const parsed = new Date(trimmedDate);
+      if (isNaN(parsed.getTime())) {
+        Alert.alert('Ошибка', 'Указана некорректная дата');
+        return;
+      }
     }
 
     haptic.medium();
     try {
       const wishlist = await createWishlist({
-        title: title.trim(),
+        title: trimmedTitle,
         description: description.trim() || undefined,
         occasion: occasion.trim() || undefined,
-        event_date: eventDate.trim() || undefined,
+        event_date: trimmedDate || undefined,
         theme: selectedTheme,
         privacy,
       });
@@ -189,9 +205,22 @@ export default function CreateWishlistScreen() {
   }, [itemUrl, startScanAnimation, stopScanAnimation]);
 
   const handleAddItem = useCallback(async () => {
-    if (!itemName.trim()) {
+    const trimmedName = itemName.trim();
+    if (!trimmedName) {
       Alert.alert('Ошибка', 'Введите название подарка');
       return;
+    }
+    if (trimmedName.length > 500) {
+      Alert.alert('Ошибка', 'Название не может быть длиннее 500 символов');
+      return;
+    }
+
+    if (itemPrice) {
+      const price = parseFloat(itemPrice);
+      if (isNaN(price) || price < 0 || price > 999999999) {
+        Alert.alert('Ошибка', 'Укажите корректную цену (от 0)');
+        return;
+      }
     }
 
     const wishlistId = createdWishlistId;
@@ -211,7 +240,7 @@ export default function CreateWishlistScreen() {
         : undefined;
 
       await addItem(wishlistId, {
-        name: itemName.trim(),
+        name: trimmedName,
         description: itemDescription.trim() || undefined,
         url: normalizedUrl,
         image_url: itemImageUrl.trim() || undefined,
@@ -228,7 +257,6 @@ export default function CreateWishlistScreen() {
       setItemDescription('');
       setItemPrice('');
       setItemImageUrl('');
-      setItemNote('');
       setAutofillResult(null);
       setScanSuccess(false);
 

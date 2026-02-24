@@ -14,6 +14,7 @@ import { colors, spacing, radius, typography } from '../../constants/design';
 import { Card } from '../../components/ui/Card';
 import { OutlineButton } from '../../components/ui/OutlineButton';
 import { haptic } from '../../lib/haptics';
+import * as SecureStore from 'expo-secure-store';
 import { useAuthStore } from '../../store/authStore';
 import { isBiometricsAvailable, authenticateWithBiometrics } from '../../lib/biometrics';
 
@@ -33,7 +34,7 @@ export default function SecuritySettingsScreen() {
     const available = await isBiometricsAvailable();
     setBiometricsAvailable(available);
     // Restore saved preference from user profile
-    setBiometricsEnabled(!!(user as any)?.biometrics_enabled);
+    setBiometricsEnabled(!!user?.biometrics_enabled);
   };
 
   const handleBack = useCallback(() => {
@@ -59,7 +60,8 @@ export default function SecuritySettingsScreen() {
 
         haptic.success();
         setBiometricsEnabled(value);
-        await updateProfile({ biometrics_enabled: value } as any);
+        await SecureStore.setItemAsync('biometrics_enabled', value ? 'true' : 'false');
+        await updateProfile({ biometrics_enabled: value });
       } catch {
         haptic.error();
         // Revert on failure

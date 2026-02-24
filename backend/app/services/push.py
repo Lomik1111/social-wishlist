@@ -5,8 +5,10 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
-async def send_push(expo_token: str, title: str, body: str, data: dict = {}) -> bool:
+async def send_push(expo_token: str, title: str, body: str, data: dict | None = None) -> bool:
     """Send push notification via Expo Push API."""
+    if data is None:
+        data = {}
     if not expo_token:
         return False
 
@@ -34,8 +36,10 @@ async def send_push(expo_token: str, title: str, body: str, data: dict = {}) -> 
         return False
 
 
-async def send_push_to_user(db, user_id, title: str, body: str, data: dict = {}):
+async def send_push_to_user(db, user_id, title: str, body: str, data: dict | None = None):
     """Helper: look up user's push token and send notification."""
+    if data is None:
+        data = {}
     from sqlalchemy import select
     from app.models.user import User
 

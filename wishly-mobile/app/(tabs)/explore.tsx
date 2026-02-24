@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { useAnimatedStyle, withSpring, useSharedValue } from 'react-native-reanimated';
@@ -20,37 +21,9 @@ import { Badge } from '../../components/ui/Badge';
 import { haptic } from '../../lib/haptics';
 import { colors, spacing, radius, typography } from '../../constants/design';
 import { timeAgo } from '../../lib/utils';
+import type { UserPublic, WishlistPublic } from '../../types';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-// ---------- Types ----------
-interface UserPublic {
-  id: string;
-  full_name: string | null;
-  username: string | null;
-  avatar_url: string | null;
-  bio: string | null;
-  is_premium: boolean;
-  is_online: boolean;
-}
-
-interface FriendWishlist {
-  id: string;
-  title: string;
-  description: string | null;
-  occasion: string | null;
-  event_date: string | null;
-  owner_name: string | null;
-  owner_username: string | null;
-  owner_avatar: string | null;
-  is_active: boolean;
-  theme: string;
-  cover_image_url: string | null;
-  show_prices: boolean;
-  item_count: number;
-  reserved_count: number;
-  created_at: string;
-}
 
 // ---------- FriendSearchCard ----------
 const FriendSearchCard = React.memo(function FriendSearchCard({
@@ -118,12 +91,12 @@ const FriendSearchCard = React.memo(function FriendSearchCard({
   );
 });
 
-// ---------- FriendWishlistCard ----------
-const FriendWishlistCard = React.memo(function FriendWishlistCard({
+// ---------- WishlistPublicCard ----------
+const WishlistPublicCard = React.memo(function WishlistPublicCard({
   wishlist,
   onPress,
 }: {
-  wishlist: FriendWishlist;
+  wishlist: WishlistPublic;
   onPress: (id: string) => void;
 }) {
   const handlePress = useCallback(() => {
@@ -221,6 +194,7 @@ export default function ExploreScreen() {
         setAddedIds((prev) => new Set(prev).add(userId));
       } catch {
         haptic.error();
+        Alert.alert('Ошибка', 'Не удалось отправить запрос');
       }
     },
     [sendRequest],
@@ -254,14 +228,14 @@ export default function ExploreScreen() {
   );
 
   const renderWishlistItem = useCallback(
-    ({ item }: { item: FriendWishlist }) => (
-      <FriendWishlistCard wishlist={item} onPress={handleWishlistPress} />
+    ({ item }: { item: WishlistPublic }) => (
+      <WishlistPublicCard wishlist={item} onPress={handleWishlistPress} />
     ),
     [handleWishlistPress],
   );
 
   const keyExtractorSearch = useCallback((item: UserPublic) => item.id, []);
-  const keyExtractorWishlist = useCallback((item: FriendWishlist) => item.id, []);
+  const keyExtractorWishlist = useCallback((item: WishlistPublic) => item.id, []);
 
   const SearchEmptyComponent = useCallback(
     () =>

@@ -22,7 +22,7 @@ export function useGoogleAuth(onSuccess: (idToken: string) => void) {
         onSuccess(idToken);
       }
     }
-  }, [response]);
+  }, [response, onSuccess]);
 
   return {
     promptAsync,

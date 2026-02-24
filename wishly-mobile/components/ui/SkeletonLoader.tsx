@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle, DimensionValue } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -34,7 +34,7 @@ export function SkeletonLoader({ width, height, borderRadius = 8, style }: Skele
     <Animated.View
       style={[
         styles.skeleton,
-        { width: width as any, height, borderRadius },
+        { width: width as DimensionValue, height, borderRadius },
         animatedStyle,
         style,
       ]}

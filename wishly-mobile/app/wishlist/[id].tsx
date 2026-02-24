@@ -69,9 +69,16 @@ const AnimatedFlatList = Animated.createAnimatedComponent(
 
 type SortMode = 'default' | 'price_asc' | 'price_desc' | 'priority';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default function WishlistDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  useEffect(() => {
+    if (!id || !UUID_REGEX.test(id)) {
+      router.replace('/(tabs)');
+    }
+  }, [id]);
   const user = useAuthStore((s) => s.user);
 
   const currentWishlist = useWishlistStore((s) => s.currentWishlist);

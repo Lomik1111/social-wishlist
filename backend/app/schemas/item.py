@@ -1,31 +1,45 @@
 from uuid import UUID
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Literal, Optional
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 
 class ItemCreate(BaseModel):
-    name: str = Field(max_length=500)
+    name: str = Field(min_length=1, max_length=500)
     description: Optional[str] = Field(default=None, max_length=1000)
-    url: Optional[str] = None
-    image_url: Optional[str] = None
-    price: Optional[Decimal] = None
-    currency: str = "RUB"
+    url: Optional[str] = Field(default=None, max_length=2048)
+    image_url: Optional[str] = Field(default=None, max_length=2048)
+    price: Optional[Decimal] = Field(default=None, ge=0)
+    currency: str = Field(default="RUB", min_length=3, max_length=3, pattern=r'^[A-Z]{3}$')
     source_domain: Optional[str] = None
     is_group_gift: bool = False
-    priority: str = "normal"
+    priority: Literal["must_have", "nice_to_have", "dream", "normal"] = "normal"
+
+    @field_validator('url', 'image_url', mode='before')
+    @classmethod
+    def validate_url_scheme(cls, v):
+        if v is not None and not v.startswith(('http://', 'https://')):
+            raise ValueError('URL must start with http:// or https://')
+        return v
 
 
 class ItemUpdate(BaseModel):
     name: Optional[str] = Field(default=None, max_length=500)
     description: Optional[str] = Field(default=None, max_length=1000)
-    url: Optional[str] = None
-    image_url: Optional[str] = None
+    url: Optional[str] = Field(default=None, max_length=2048)
+    image_url: Optional[str] = Field(default=None, max_length=2048)
     price: Optional[Decimal] = None
-    currency: Optional[str] = None
+    currency: Optional[str] = Field(default=None, min_length=3, max_length=3, pattern=r'^[A-Z]{3}$')
     is_group_gift: Optional[bool] = None
-    priority: Optional[str] = None
+    priority: Optional[Literal["must_have", "nice_to_have", "dream", "normal"]] = None
+
+    @field_validator('url', 'image_url', mode='before')
+    @classmethod
+    def validate_url_scheme(cls, v):
+        if v is not None and not v.startswith(('http://', 'https://')):
+            raise ValueError('URL must start with http:// or https://')
+        return v
 
 
 class ItemResponse(BaseModel):
