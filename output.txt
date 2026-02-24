@@ -1,0 +1,12 @@
+Fixing WishlyMobile/src/screens/FriendProfileScreen.tsx
+Fixing WishlyMobile/src/screens/NotificationsScreen.tsx
+Fixing WishlyMobile/src/screens/ItemDetailScreen.tsx
+Fixing WishlyMobile/src/screens/WishlistCreateScreen.tsx
+Fixing WishlyMobile/src/screens/FavoritesScreen.tsx
+Fixing WishlyMobile/src/screens/StatsScreen.tsx
+Fixing WishlyMobile/src/screens/WishlistDetailScreen.tsx
+Fixing WishlyMobile/src/screens/auth/LoginScreen.tsx
+Fixing WishlyMobile/src/screens/auth/RegisterScreen.tsx
+Fixing WishlyMobile/src/screens/tabs/ProfileScreen.tsx
+Fixing WishlyMobile/src/screens/tabs/ExploreScreen.tsx
+Fixing WishlyMobile/src/screens/settings/ThemeScreen.tsx

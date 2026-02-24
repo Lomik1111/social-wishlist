@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "Wishly",
+    "slug": "wishly-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "scheme": "wishly",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0A0F"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.wishly.app",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Используйте Face ID для быстрого входа в приложение",
+        "NSCameraUsageDescription": "Камера нужна для загрузки фото аватара",
+        "NSPhotoLibraryUsageDescription": "Доступ к фото для загрузки аватара"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0A0A0F"
+      },
+      "package": "com.wishly.app"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#FF2D78"
+        }
+      ],
+      "expo-local-authentication"
+    ],
+    "owner": "lokot667",
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_PROJECT_ID"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/YOUR_PROJECT_ID"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
+  }
+}
