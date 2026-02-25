@@ -1,6 +1,7 @@
 import httpx
 import logging
 from app.config import get_settings
+from app.utils.http import get_http_client
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -33,15 +34,15 @@ async def send_password_reset_email(to_email: str, code: str) -> bool:
     }
 
     try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                RESEND_API_URL,
-                json=payload,
-                headers={"Authorization": f"Bearer {settings.resend_api_key}"},
-                timeout=10,
-            )
-            resp.raise_for_status()
-            return True
+        client = get_http_client()
+        resp = await client.post(
+            RESEND_API_URL,
+            json=payload,
+            headers={"Authorization": f"Bearer {settings.resend_api_key}"},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        return True
     except Exception:
         logger.exception("Failed to send password reset email to %s", to_email)
         return False
