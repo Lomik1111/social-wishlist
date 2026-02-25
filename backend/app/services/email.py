@@ -8,9 +8,25 @@ settings = get_settings()
 RESEND_API_URL = "https://api.resend.com/emails"
 
 
+def _mask_email(email: str) -> str:
+    if not email or "@" not in email:
+        return "***"
+
+    local, domain = email.rsplit("@", 1)
+    if not local:
+        return f"***@{domain}"
+
+    if len(local) <= 3:
+        masked_local = local[0] + "***"
+    else:
+        masked_local = local[:2] + "***" + local[-1]
+
+    return f"{masked_local}@{domain}"
+
+
 async def send_password_reset_email(to_email: str, code: str) -> bool:
     if not settings.resend_api_key:
-        logger.warning("RESEND_API_KEY not configured, skipping email to %s", to_email)
+        logger.warning("RESEND_API_KEY not configured, skipping email to %s", _mask_email(to_email))
         return False
 
     payload = {
@@ -43,5 +59,5 @@ async def send_password_reset_email(to_email: str, code: str) -> bool:
             resp.raise_for_status()
             return True
     except Exception:
-        logger.exception("Failed to send password reset email to %s", to_email)
+        logger.exception("Failed to send password reset email to %s", _mask_email(to_email))
         return False
