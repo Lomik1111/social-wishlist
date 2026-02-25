@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { SecureStorage } from '../lib/secureStorage';
 import api from '../lib/api';
+import { useWishlistStore } from './wishlistStore';
+import { useFriendStore } from './friendStore';
+import { useNotificationStore } from './notificationStore';
 
 interface User {
   id: string;
@@ -129,6 +132,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     await SecureStorage.deleteItem('access_token');
     await SecureStorage.deleteItem('refresh_token');
+
+    // Clear other stores
+    useWishlistStore.getState().reset?.() || useWishlistStore.setState({ wishlists: [], currentWishlist: null, currentItems: [] });
+    useFriendStore.getState().reset?.() || useFriendStore.setState({ friends: [], searchResults: [] });
+    useNotificationStore.getState().reset?.() || useNotificationStore.setState({ notifications: [], unreadCount: 0 });
+
     set({ user: null, isAuthenticated: false, error: null });
   },
 

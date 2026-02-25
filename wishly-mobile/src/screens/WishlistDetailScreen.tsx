@@ -37,28 +37,8 @@ import {
 } from '../../constants/design';
 import { formatDate, pluralize } from '../../lib/utils';
 import { haptic } from '../../lib/haptics';
-type Item = {
-  id: string;
-  wishlist_id: string;
-  name: string;
-  description: string | null;
-  url: string | null;
-  image_url: string | null;
-  price: number | null;
-  currency: string;
-  source_domain: string | null;
-  is_group_gift: boolean;
-  priority: string;
-  sort_order: number;
-  is_liked_by_owner: boolean;
-  like_count: number;
-  is_reserved: boolean;
-  reservation_count: number;
-  contribution_total: number;
-  contribution_count: number;
-  progress_percentage: number;
-  created_at: string;
-};
+import { Item } from '../../types';
+
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HERO_HEIGHT = 280;

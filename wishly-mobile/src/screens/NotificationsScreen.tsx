@@ -21,17 +21,7 @@ import { colors, spacing, radius, typography } from '../constants/design';
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 // ---------- Types ----------
-interface Notification {
-  id: string;
-  recipient_id: string;
-  sender_id: string | null;
-  type: string;
-  title: string | null;
-  body: string | null;
-  data: Record<string, unknown>;
-  is_read: boolean;
-  created_at: string;
-}
+
 
 type FilterType = 'all' | 'gift' | 'friend_request' | 'like';
 

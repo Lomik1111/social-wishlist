@@ -1,10 +1,10 @@
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { useEffect, useState, useCallback } from 'react';
+import Config from 'react-native-config';
 
 // Configure Google Signin
-// Ideally this should be called once, e.g. in App.tsx, but calling it here is also fine as long as we ensure it's configured.
 GoogleSignin.configure({
-  webClientId: process.env.GOOGLE_WEB_CLIENT_ID,
+  webClientId: Config.GOOGLE_WEB_CLIENT_ID,
   offlineAccess: true,
 });
 

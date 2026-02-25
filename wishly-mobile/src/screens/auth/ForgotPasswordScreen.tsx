@@ -21,13 +21,10 @@ import { PillButton } from '../../components/ui/PillButton';
 import { useAuthStore } from '../../store/authStore';
 import { haptic } from '../../lib/haptics';
 import { colors, typography, spacing } from '../../constants/design';
-
 type Step = 'email' | 'code';
-
 export default function ForgotPasswordScreen() {
   const navigation = useNavigation<any>();
   const { forgotPassword, resetPassword, isLoading, error, clearError } = useAuthStore();
-
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -35,11 +32,9 @@ export default function ForgotPasswordScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [success, setSuccess] = useState(false);
   const shakeX = useSharedValue(0);
-
   const shakeStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: shakeX.value }],
   }));
-
   const triggerShake = () => {
     shakeX.value = withSequence(
       withTiming(-10, { duration: 50 }),
@@ -49,7 +44,6 @@ export default function ForgotPasswordScreen() {
       withTiming(0, { duration: 50 })
     );
   };
-
   const handleSendCode = useCallback(async () => {
     clearError();
     haptic.medium();
@@ -62,7 +56,6 @@ export default function ForgotPasswordScreen() {
       haptic.error();
     }
   }, [email]);
-
   const handleResetPassword = useCallback(async () => {
     clearError();
     haptic.medium();
@@ -75,7 +68,6 @@ export default function ForgotPasswordScreen() {
       haptic.error();
     }
   }, [email, code, newPassword]);
-
   if (success) {
     return (
       <SafeAreaView style={styles.container}>
@@ -87,14 +79,13 @@ export default function ForgotPasswordScreen() {
           <Text style={styles.subtitle}>{'Теперь вы можете войти с новым паролем'}</Text>
           <PillButton
             title={'Войти'}
-            onPress={() => router.replace('/(auth)/login')}
+            onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Auth' }] })}
             style={styles.successButton}
           />
         </View>
       </SafeAreaView>
     );
   }
-
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -120,7 +111,6 @@ export default function ForgotPasswordScreen() {
                 : `Код отправлен на ${email}`}
             </Text>
           </View>
-
           {/* Glass card */}
           <Animated.View style={[styles.glassCard, shakeStyle]}>
             {step === 'email' ? (
@@ -138,9 +128,7 @@ export default function ForgotPasswordScreen() {
                   autoCapitalize="none"
                   autoComplete="email"
                 />
-
                 {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
                 <PillButton
                   title={'Отправить код'}
                   onPress={handleSendCode}
@@ -162,7 +150,6 @@ export default function ForgotPasswordScreen() {
                   }}
                   keyboardType="number-pad"
                 />
-
                 <UnderlineInput
                   label={'Новый пароль'}
                   icon={'\uD83D\uDD12'}
@@ -176,9 +163,7 @@ export default function ForgotPasswordScreen() {
                   rightIcon={showPassword ? '\uD83D\uDC41' : '\uD83D\uDC41\u200D\uD83D\uDDE8'}
                   onRightIconPress={() => setShowPassword(!showPassword)}
                 />
-
                 {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
                 <PillButton
                   title={'Сменить пароль'}
                   onPress={handleResetPassword}
@@ -186,7 +171,6 @@ export default function ForgotPasswordScreen() {
                   disabled={code.length !== 6 || newPassword.length < 8}
                   style={styles.actionButton}
                 />
-
                 <Pressable
                   style={styles.resendRow}
                   onPress={() => {
@@ -199,7 +183,6 @@ export default function ForgotPasswordScreen() {
               </>
             )}
           </Animated.View>
-
           {/* Bottom link */}
           <View style={styles.bottomRow}>
             <Pressable onPress={() => navigation.goBack()}>
@@ -211,7 +194,6 @@ export default function ForgotPasswordScreen() {
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
