@@ -1,15 +1,11 @@
-import warnings
-
-from pydantic import ConfigDict, model_validator
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 from functools import lru_cache
-
-_DEFAULT_SECRET_KEY = "dev-secret-key-change-in-production-min-32-chars-long"
 
 
 class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://wishlist:wishlist_dev@localhost:5432/wishlist"
-    secret_key: str = _DEFAULT_SECRET_KEY
+    secret_key: str
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
     algorithm: str = "HS256"
@@ -22,16 +18,6 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     resend_from_email: str = "Wishly <onboarding@resend.dev>"
     password_reset_code_ttl_minutes: int = 15
-
-    @model_validator(mode='after')
-    def _check_secret_key(self) -> 'Settings':
-        if self.environment == "production" and self.secret_key == _DEFAULT_SECRET_KEY:
-            warnings.warn(
-                "SECRET_KEY is set to the default value in production! "
-                "Set a strong, unique SECRET_KEY environment variable.",
-                stacklevel=2,
-            )
-        return self
 
     model_config = ConfigDict(env_file=".env")
 
