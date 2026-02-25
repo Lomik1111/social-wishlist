@@ -168,11 +168,10 @@ async def unreserve_item(
     if not reservation:
         raise HTTPException(status_code=404, detail="Бронирование не найдено")
 
-    if user and reservation.reserver_id == user.id:
-        pass
-    elif data and data.guest_identifier and reservation.guest_identifier == data.guest_identifier:
-        pass
-    else:
+    if not (
+        (user and reservation.reserver_id == user.id) or
+        (data and data.guest_identifier and reservation.guest_identifier == data.guest_identifier)
+    ):
         raise HTTPException(status_code=403, detail="Нет прав")
 
     item_result = await db.execute(select(Item).where(Item.id == reservation.item_id))
