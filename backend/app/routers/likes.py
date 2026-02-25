@@ -2,7 +2,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func as sa_func
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 from app.database import get_db
 from app.models.user import User
 from app.models.item import Item
@@ -71,7 +71,7 @@ async def get_liked_items(user: User = Depends(get_current_user), db: AsyncSessi
         select(Item)
         .join(ItemLike, ItemLike.item_id == Item.id)
         .where(ItemLike.user_id == user.id)
-        .options(selectinload(Item.wishlist))
+        .options(joinedload(Item.wishlist))
         .order_by(ItemLike.created_at.desc())
     )
     items = result.scalars().all()
