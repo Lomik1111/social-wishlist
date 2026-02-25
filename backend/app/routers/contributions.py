@@ -93,11 +93,10 @@ async def remove_contribution(
     if not contribution:
         raise HTTPException(status_code=404, detail="Вклад не найден")
 
-    if user and contribution.contributor_id == user.id:
-        pass
-    elif data and data.guest_identifier and contribution.guest_identifier == data.guest_identifier:
-        pass
-    else:
+    if not (
+        (user and contribution.contributor_id == user.id) or
+        (data and data.guest_identifier and contribution.guest_identifier == data.guest_identifier)
+    ):
         raise HTTPException(status_code=403, detail="Нет прав")
 
     item_result = await db.execute(select(Item).where(Item.id == contribution.item_id))
