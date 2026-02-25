@@ -49,7 +49,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 
       return token;
   } catch (error) {
-      console.error('FCM Token Error', error);
+      if (__DEV__) console.error('FCM Token Error', error);
       return null;
   }
 }

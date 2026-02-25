@@ -151,7 +151,7 @@ export default function CreateWishlistScreen() {
           {
             text: 'Позже',
             style: 'cancel',
-            onPress: () => router.replace(`/wishlist/${wishlist.id}`),
+            onPress: () => navigation.replace('WishlistDetail', { id: wishlist.id }),
           },
           {
             text: 'Добавить',
@@ -268,7 +268,7 @@ export default function CreateWishlistScreen() {
         },
         {
           text: 'Готово',
-          onPress: () => router.replace(`/wishlist/${wishlistId}`),
+          onPress: () => navigation.replace('WishlistDetail', { id: wishlistId }),
         },
       ]);
     } catch {
@@ -285,7 +285,7 @@ export default function CreateWishlistScreen() {
     itemPrice,
     createdWishlistId,
     addItem,
-    router,
+    navigation,
   ]);
 
   const handleThemeSelect = useCallback(
@@ -306,7 +306,7 @@ export default function CreateWishlistScreen() {
     if (step === 'addItem' && !params.addToWishlist) {
       // If we came from create step and there's a created wishlist, go there
       if (createdWishlistId) {
-        router.replace(`/wishlist/${createdWishlistId}`);
+        navigation.replace('WishlistDetail', { id: createdWishlistId });
       } else {
         setStep('create');
       }
@@ -589,7 +589,7 @@ export default function CreateWishlistScreen() {
         {/* Skip button */}
         {createdWishlistId && (
           <Pressable
-            onPress={() => router.replace(`/wishlist/${createdWishlistId}`)}
+            onPress={() => navigation.replace('WishlistDetail', { id: createdWishlistId })}
             style={styles.skipButton}
           >
             <Text style={styles.skipButtonText}>{'Пропустить'}</Text>

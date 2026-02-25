@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import type { Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -123,9 +122,9 @@ export default function ProfileScreen() {
   }, [logout, navigation]);
 
   const navigateTo = useCallback(
-    (path: string) => {
+    (screenName: string) => {
       haptic.light();
-      router.push(path as Href);
+      navigation.navigate(screenName);
     },
     [navigation],
   );
@@ -157,7 +156,7 @@ export default function ProfileScreen() {
             </LinearGradient>
             <Pressable
               style={styles.editAvatarButton}
-              onPress={() => navigateTo('/settings/privacy')}
+              onPress={() => navigateTo('SettingsPrivacy')}
             >
               <Text style={styles.editAvatarIcon}>✏️</Text>
             </Pressable>
@@ -184,19 +183,19 @@ export default function ProfileScreen() {
           <SettingRow
             icon="👤"
             title="Личные данные"
-            onPress={() => navigateTo('/settings/privacy')}
+            onPress={() => navigateTo('SettingsPrivacy')}
           />
           <View style={styles.separator} />
           <SettingRow
             icon="📋"
             title="Мои Списки"
-            onPress={() => navigateTo('/(tabs)')}
+            onPress={() => navigateTo('Main')}
           />
           <View style={styles.separator} />
           <SettingRow
             icon="📦"
             title="Архив желаний"
-            onPress={() => navigateTo('/favorites')}
+            onPress={() => navigateTo('Favorites')}
           />
         </SettingsSection>
 
@@ -205,19 +204,19 @@ export default function ProfileScreen() {
           <SettingRow
             icon="🔔"
             title="Уведомления"
-            onPress={() => navigateTo('/notifications')}
+            onPress={() => navigateTo('Notifications')}
           />
           <View style={styles.separator} />
           <SettingRow
             icon="🔒"
             title="Приватность"
-            onPress={() => navigateTo('/settings/privacy')}
+            onPress={() => navigateTo('SettingsPrivacy')}
           />
           <View style={styles.separator} />
           <SettingRow
             icon="🎨"
             title="Тема оформления"
-            onPress={() => navigateTo('/settings/theme')}
+            onPress={() => navigateTo('SettingsTheme')}
           />
         </SettingsSection>
 
