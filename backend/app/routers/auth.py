@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -108,9 +109,11 @@ async def register(request: Request, data: UserRegister, db: AsyncSession = Depe
         if existing_username.scalar_one_or_none():
             raise HTTPException(status_code=400, detail="Username уже занят")
 
+    loop = asyncio.get_running_loop()
+    password_hash = await loop.run_in_executor(None, hash_password, data.password)
     user = User(
         email=data.email,
-        password_hash=hash_password(data.password),
+        password_hash=password_hash,
         full_name=data.full_name,
         username=data.username,
     )
@@ -125,7 +128,15 @@ async def register(request: Request, data: UserRegister, db: AsyncSession = Depe
 async def login(request: Request, data: UserLogin, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
-    if not user or not user.password_hash or not verify_password(data.password, user.password_hash):
+
+    is_password_correct = False
+    if user and user.password_hash:
+        loop = asyncio.get_running_loop()
+        is_password_correct = await loop.run_in_executor(
+            None, verify_password, data.password, user.password_hash
+        )
+
+    if not is_password_correct:
         raise HTTPException(status_code=401, detail="Неверные учётные данные")
 
     return await _issue_tokens(db, user)
@@ -263,7 +274,8 @@ async def reset_password(request: Request, data: ResetPasswordRequest, db: Async
         raise HTTPException(status_code=400, detail="Неверный или истёкший код")
 
     reset_code.used = True
-    user.password_hash = hash_password(data.new_password)
+    loop = asyncio.get_running_loop()
+    user.password_hash = await loop.run_in_executor(None, hash_password, data.new_password)
     await db.flush()
 
     return {"message": "Пароль успешно изменён"}
