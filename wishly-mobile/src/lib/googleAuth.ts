@@ -1,10 +1,11 @@
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { GoogleSignin, statusCodes, isErrorWithCode } from '@react-native-google-signin/google-signin';
+import Config from 'react-native-config';
 import { useEffect, useState, useCallback } from 'react';
 
 // Configure Google Signin
 // Ideally this should be called once, e.g. in App.tsx, but calling it here is also fine as long as we ensure it's configured.
 GoogleSignin.configure({
-  webClientId: process.env.GOOGLE_WEB_CLIENT_ID,
+  webClientId: Config.GOOGLE_WEB_CLIENT_ID,
   offlineAccess: true,
 });
 
@@ -31,16 +32,24 @@ export function useGoogleAuth(onSuccess: (idToken: string) => void) {
       } else {
          console.warn('Google Signin: No idToken');
       }
-    } catch (error: any) {
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        // user cancelled the login flow
-      } else if (error.code === statusCodes.IN_PROGRESS) {
-        // operation (e.g. sign in) is in progress already
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        // play services not available or outdated
+    } catch (error) {
+      if (isErrorWithCode(error)) {
+        switch (error.code) {
+          case statusCodes.SIGN_IN_CANCELLED:
+            // user cancelled the login flow
+            break;
+          case statusCodes.IN_PROGRESS:
+            // operation (e.g. sign in) is in progress already
+            break;
+          case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+            // play services not available or outdated
+            break;
+          default:
+            // some other error happened
+            console.error('Google Signin Error', error);
+        }
       } else {
-        // some other error happened
-        console.error('Google Signin Error', error);
+        console.error('An error that is not a GoogleSignin error occurred', error);
       }
     }
   }, [onSuccess]);
