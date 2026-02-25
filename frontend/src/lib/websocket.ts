@@ -7,7 +7,8 @@ export type WSMessage = {
 
 export function createWishlistSocket(
   wishlistId: string,
-  onMessage: (msg: WSMessage) => void
+  onMessage: (msg: WSMessage) => void,
+  options: { token?: string; shareToken?: string } = {}
 ): { close: () => void } {
   let ws: WebSocket | null = null;
   let pingInterval: ReturnType<typeof setInterval> | null = null;
@@ -17,7 +18,20 @@ export function createWishlistSocket(
 
   function connect() {
     if (closed) return;
-    ws = new WebSocket(`${WS_URL}/ws/${wishlistId}`);
+
+    const url = new URL(`${WS_URL}/ws/${wishlistId}`);
+
+    // Prefer explicit token, fallback to localStorage
+    const token = options.token || (typeof window !== "undefined" ? localStorage.getItem("access_token") : null);
+    if (token) {
+      url.searchParams.append("token", token);
+    }
+
+    if (options.shareToken) {
+      url.searchParams.append("share_token", options.shareToken);
+    }
+
+    ws = new WebSocket(url.toString());
 
     ws.onopen = () => {
       retries = 0;

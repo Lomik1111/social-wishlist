@@ -180,10 +180,10 @@ export default function PublicWishlistPage() {
           fetchWishlist();
           break;
       }
-    });
+    }, { shareToken });
 
     return () => socket.close();
-  }, [wishlist, fetchWishlist]);
+  }, [wishlist, fetchWishlist, shareToken]);
 
   // --- Guest name flow ---
   const ensureGuestName = (action: {
