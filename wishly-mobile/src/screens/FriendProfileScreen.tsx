@@ -129,7 +129,7 @@ export default function FriendProfileScreen() {
   const handleOpenWishlist = useCallback(
     (wishlistId: string) => {
       haptic.light();
-      router.push(`/wishlist/${wishlistId}`);
+      navigation.navigate('WishlistDetail', { id: wishlistId });
     },
     [navigation],
   );

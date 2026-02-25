@@ -1,5 +1,6 @@
 import logging
 from app.config import get_settings
+from app.utils.http import get_http_client
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -13,24 +14,23 @@ async def send_push(expo_token: str, title: str, body: str, data: dict | None = 
         return False
 
     try:
-        import httpx
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                settings.expo_push_url,
-                json={
-                    "to": expo_token,
-                    "title": title,
-                    "body": body,
-                    "data": data,
-                    "sound": "default",
-                },
-                timeout=10,
-            )
-            result = response.json()
-            if response.status_code != 200:
-                logger.error(f"Push failed: {result}")
-                return False
-            return True
+        client = get_http_client()
+        response = await client.post(
+            settings.expo_push_url,
+            json={
+                "to": expo_token,
+                "title": title,
+                "body": body,
+                "data": data,
+                "sound": "default",
+            },
+            timeout=10,
+        )
+        result = response.json()
+        if response.status_code != 200:
+            logger.error(f"Push failed: {result}")
+            return False
+        return True
     except Exception as e:
         logger.error(f"Push error: {e}")
         return False

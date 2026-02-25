@@ -202,7 +202,7 @@ export default function ExploreScreen() {
 
   const handleWishlistPress = useCallback(
     (id: string) => {
-      router.push(`/wishlist/${id}`);
+      navigation.navigate('WishlistDetail', { id });
     },
     [navigation],
   );

@@ -3,7 +3,7 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func as sa_func
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 from app.database import get_db
 from app.models.user import User
 from app.models.wishlist import Wishlist
@@ -79,7 +79,7 @@ async def get_friends_wishlists(user: User = Depends(get_current_user), db: Asyn
             Wishlist.is_active == True,
             Wishlist.privacy.in_(["public", "friends"]),
         )
-        .options(selectinload(Wishlist.user))
+        .options(joinedload(Wishlist.user))
         .order_by(Wishlist.updated_at.desc())
         .limit(50)
     )
@@ -215,7 +215,7 @@ async def get_public_wishlist(share_token: str, db: AsyncSession = Depends(get_d
     result = await db.execute(
         select(Wishlist)
         .where(Wishlist.share_token == share_token)
-        .options(selectinload(Wishlist.user))
+        .options(joinedload(Wishlist.user))
         .options(selectinload(Wishlist.items).selectinload(Item.reservations))
     )
     wishlist = result.scalar_one_or_none()

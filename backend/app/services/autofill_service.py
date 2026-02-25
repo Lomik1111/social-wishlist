@@ -22,6 +22,7 @@ from urllib.parse import urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup, Tag
+from app.utils.http import get_http_client
 
 logger = logging.getLogger(__name__)
 
@@ -241,26 +242,29 @@ async def fetch_metadata(url: str) -> dict:
                 "Accept": _ACCEPT_HEADER,
                 "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
             }
-            async with httpx.AsyncClient(
-                timeout=15.0, follow_redirects=True, http2=False,
-            ) as client:
-                response = await client.get(url, headers=headers)
-                last_status = response.status_code
-                if response.status_code == 200:
-                    html = response.text
-                    final_url = str(response.url)
-                    break
-                # 403 / 429 — retry with another UA
-                if response.status_code in (403, 429):
-                    logger.info(
-                        "Attempt %d: HTTP %d for %s, retrying with another UA",
-                        attempt + 1, response.status_code, url,
-                    )
-                    if attempt < 2:
-                        await asyncio.sleep(1 + attempt)
-                    continue
-                # Other client/server errors — no point retrying
+            client = get_http_client()
+            response = await client.get(
+                url,
+                headers=headers,
+                timeout=15.0,
+                follow_redirects=True,
+            )
+            last_status = response.status_code
+            if response.status_code == 200:
+                html = response.text
+                final_url = str(response.url)
                 break
+            # 403 / 429 — retry with another UA
+            if response.status_code in (403, 429):
+                logger.info(
+                    "Attempt %d: HTTP %d for %s, retrying with another UA",
+                    attempt + 1, response.status_code, url,
+                )
+                if attempt < 2:
+                    await asyncio.sleep(1 + attempt)
+                continue
+            # Other client/server errors — no point retrying
+            break
         except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout) as exc:
             logger.warning("Attempt %d failed for %s: %s", attempt + 1, url, exc)
             if attempt < 2:

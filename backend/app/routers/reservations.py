@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, update, case
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 from app.database import get_db
 from app.models.user import User
 from app.models.item import Item
@@ -25,7 +25,7 @@ async def get_my_reservations(user: User = Depends(get_current_user), db: AsyncS
     result = await db.execute(
         select(Reservation)
         .where(Reservation.reserver_id == user.id)
-        .options(selectinload(Reservation.item).selectinload(Item.wishlist).selectinload(Wishlist.user))
+        .options(joinedload(Reservation.item).joinedload(Item.wishlist).joinedload(Wishlist.user))
         .order_by(Reservation.created_at.desc())
     )
     reservations = result.scalars().all()
@@ -136,7 +136,7 @@ async def send_thanks(
 ):
     result = await db.execute(
         select(Reservation).where(Reservation.id == reservation_id)
-        .options(selectinload(Reservation.item))
+        .options(joinedload(Reservation.item))
     )
     reservation = result.scalar_one_or_none()
     if not reservation:
@@ -168,11 +168,10 @@ async def unreserve_item(
     if not reservation:
         raise HTTPException(status_code=404, detail="Бронирование не найдено")
 
-    if user and reservation.reserver_id == user.id:
-        pass
-    elif data and data.guest_identifier and reservation.guest_identifier == data.guest_identifier:
-        pass
-    else:
+    if not (
+        (user and reservation.reserver_id == user.id) or
+        (data and data.guest_identifier and reservation.guest_identifier == data.guest_identifier)
+    ):
         raise HTTPException(status_code=403, detail="Нет прав")
 
     item_result = await db.execute(select(Item).where(Item.id == reservation.item_id))

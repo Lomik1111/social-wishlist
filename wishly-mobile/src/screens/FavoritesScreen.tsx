@@ -9,7 +9,6 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
-import type { Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -62,7 +61,7 @@ const FavoriteCard = React.memo(function FavoriteCard({
 
   const handlePress = useCallback(() => {
     haptic.light();
-    router.push(`/item/${item.id}` as Href);
+    navigation.navigate('ItemDetail', { id: item.id });
   }, [item.id, navigation]);
 
   return (

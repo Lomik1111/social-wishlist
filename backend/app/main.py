@@ -8,6 +8,7 @@ from sqlalchemy import text
 from app.config import get_settings
 from app.database import engine, async_session
 from app.routers import auth, wishlists, items, reservations, contributions, autofill, websocket, friends, likes, notifications, stats, themes
+from app.utils.http import init_http_client, close_http_client
 
 settings = get_settings()
 
@@ -16,10 +17,14 @@ limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app):
+    # Initialize shared HTTP client
+    await init_http_client()
     # Validate DB connection on startup
     async with async_session() as session:
         await session.execute(text("SELECT 1"))
     yield
+    # Close shared HTTP client
+    await close_http_client()
     await engine.dispose()
 
 

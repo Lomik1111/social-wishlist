@@ -110,7 +110,7 @@ export default function WishlistDetailScreen() {
 
   const handleItemPress = useCallback(
     (item: Item) => {
-      router.push(`/item/${item.id}`);
+      navigation.navigate('ItemDetail', { id: item.id });
     },
     [navigation]
   );
@@ -137,7 +137,7 @@ export default function WishlistDetailScreen() {
   const handleAddRecommendation = useCallback(() => {
     haptic.medium();
     if (currentWishlist) {
-      router.push(`/wishlist/create?addToWishlist=${currentWishlist.id}`);
+      navigation.navigate('WishlistCreate', { addToWishlist: currentWishlist.id });
     }
   }, [navigation, currentWishlist]);
 

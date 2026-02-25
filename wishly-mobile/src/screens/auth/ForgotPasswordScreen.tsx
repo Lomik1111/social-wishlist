@@ -12,9 +12,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Animated, {
   useSharedValue,
-  useAnimatedStyle,
-  withSequence,
-  withTiming,
 } from 'react-native-reanimated';
 import { UnderlineInput } from '../../components/ui/UnderlineInput';
 import { PillButton } from '../../components/ui/PillButton';

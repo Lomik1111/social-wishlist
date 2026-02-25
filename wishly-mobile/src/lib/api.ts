@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import Config from 'react-native-config';
 import { SecureStorage } from './secureStorage';
 import Config from 'react-native-config';
 
