@@ -133,28 +133,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await SecureStorage.deleteItem('access_token');
     await SecureStorage.deleteItem('refresh_token');
 
-    // Reset other stores
-    useWishlistStore.setState({
-      wishlists: [],
-      currentWishlist: null,
-      currentItems: [],
-      friendsWishlists: [],
-      isLoading: false,
-      error: null,
-    });
-    useFriendStore.setState({
-      friends: [],
-      requests: [],
-      searchResults: [],
-      isLoading: false,
-      error: null,
-    });
-    useNotificationStore.setState({
-      notifications: [],
-      unreadCount: 0,
-      isLoading: false,
-      error: null,
-    });
+    // Clear other stores
+    useWishlistStore.getState().reset?.() || useWishlistStore.setState({ wishlists: [], currentWishlist: null, currentItems: [] });
+    useFriendStore.getState().reset?.() || useFriendStore.setState({ friends: [], searchResults: [] });
+    useNotificationStore.getState().reset?.() || useNotificationStore.setState({ notifications: [], unreadCount: 0 });
 
     set({ user: null, isAuthenticated: false, error: null });
   },

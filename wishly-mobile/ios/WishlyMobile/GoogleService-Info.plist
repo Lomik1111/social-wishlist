@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>mock-client-id.apps.googleusercontent.com</string>
+	<string>000000000000-ios.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.mock-client-id</string>
+	<string>com.googleusercontent.apps.000000000000-ios</string>
 	<key>API_KEY</key>
-	<string>mock-api-key</string>
+	<string>AIzaSyDummyKey</string>
 	<key>GCM_SENDER_ID</key>
 	<string>000000000000</string>
 	<key>PLIST_VERSION</key>

@@ -14,18 +14,34 @@
       },
       "oauth_client": [
         {
-          "client_id": "mock-client-id.apps.googleusercontent.com",
+          "client_id": "000000000000-android.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.wishlymobile",
+            "certificate_hash": "0000000000000000000000000000000000000000"
+          }
+        },
+        {
+          "client_id": "000000000000-web.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "mock-api-key"
+          "current_key": "AIzaSyDummyKey"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "000000000000-ios.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.wishlymobile"
+              }
+            }
+          ]
         }
       }
     }
