@@ -1,7 +1,8 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import Config from 'react-native-config';
 import { SecureStorage } from './secureStorage';
 
-const API_URL = 'https://social-wishlist-production.up.railway.app'; // Fallback or hardcoded for now until env is set up
+const API_URL = Config.API_URL;
 
 const api = axios.create({
   baseURL: `${API_URL}/api/v1`,

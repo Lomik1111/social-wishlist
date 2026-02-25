@@ -13,9 +13,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Animated, {
   useSharedValue,
-  useAnimatedStyle,
-  withSequence,
-  withTiming,
 } from 'react-native-reanimated';
 import { UnderlineInput } from '../../components/ui/UnderlineInput';
 import { PillButton } from '../../components/ui/PillButton';
@@ -23,6 +20,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useGoogleAuth } from '../../lib/googleAuth';
 import { haptic } from '../../lib/haptics';
 import { colors, typography, spacing } from '../../constants/design';
+import { useShakeAnimation } from '../../hooks/useShakeAnimation';
 
 export default function RegisterScreen() {
   const navigation = useNavigation<any>();
@@ -33,21 +31,7 @@ export default function RegisterScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const shakeX = useSharedValue(0);
-
-  const shakeStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shakeX.value }],
-  }));
-
-  const triggerShake = () => {
-    shakeX.value = withSequence(
-      withTiming(-10, { duration: 50 }),
-      withTiming(10, { duration: 50 }),
-      withTiming(-10, { duration: 50 }),
-      withTiming(10, { duration: 50 }),
-      withTiming(0, { duration: 50 })
-    );
-  };
+  const { shakeStyle, triggerShake } = useShakeAnimation();
 
   const handleRegister = useCallback(async () => {
     clearError();

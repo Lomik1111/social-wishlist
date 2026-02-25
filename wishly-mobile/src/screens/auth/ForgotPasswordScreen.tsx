@@ -12,15 +12,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Animated, {
   useSharedValue,
-  useAnimatedStyle,
-  withSequence,
-  withTiming,
 } from 'react-native-reanimated';
 import { UnderlineInput } from '../../components/ui/UnderlineInput';
 import { PillButton } from '../../components/ui/PillButton';
 import { useAuthStore } from '../../store/authStore';
 import { haptic } from '../../lib/haptics';
 import { colors, typography, spacing } from '../../constants/design';
+import { useShakeAnimation } from '../../hooks/useShakeAnimation';
 
 type Step = 'email' | 'code';
 
@@ -34,21 +32,7 @@ export default function ForgotPasswordScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [success, setSuccess] = useState(false);
-  const shakeX = useSharedValue(0);
-
-  const shakeStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shakeX.value }],
-  }));
-
-  const triggerShake = () => {
-    shakeX.value = withSequence(
-      withTiming(-10, { duration: 50 }),
-      withTiming(10, { duration: 50 }),
-      withTiming(-10, { duration: 50 }),
-      withTiming(10, { duration: 50 }),
-      withTiming(0, { duration: 50 })
-    );
-  };
+  const { shakeStyle, triggerShake } = useShakeAnimation();
 
   const handleSendCode = useCallback(async () => {
     clearError();
@@ -87,7 +71,7 @@ export default function ForgotPasswordScreen() {
           <Text style={styles.subtitle}>{'Теперь вы можете войти с новым паролем'}</Text>
           <PillButton
             title={'Войти'}
-            onPress={() => router.replace('/(auth)/login')}
+            onPress={() => navigation.navigate('Login')}
             style={styles.successButton}
           />
         </View>
