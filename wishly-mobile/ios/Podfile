@@ -17,6 +17,8 @@ end
 target 'WishlyMobile' do
   config = use_native_modules!
   pod 'RNWorklets', :path => '../node_modules/react-native-worklets'
+  pod 'GoogleUtilities', :modular_headers => true
+  pod 'FirebaseCoreInternal', :modular_headers => true
 
   use_react_native!(
     :path => config[:reactNativePath],
