@@ -435,15 +435,6 @@ export default function CreateWishlistScreen() {
           </View>
         </View>
 
-        {/* Create button */}
-        <View style={styles.buttonContainer}>
-          <PillButton
-            title="Создать"
-            onPress={handleCreateWishlist}
-            loading={isLoading}
-            disabled={!title.trim()}
-          />
-        </View>
       </View>
     </ScrollView>
   );
@@ -576,37 +567,45 @@ export default function CreateWishlistScreen() {
           icon="🖼️"
         />
 
-        {/* Add to wishlist button */}
-        <View style={styles.buttonContainer}>
-          <PillButton
-            title="Добавить в список"
-            onPress={handleAddItem}
-            loading={addingItem}
-            disabled={!itemName.trim()}
-          />
-        </View>
-
-        {/* Skip button */}
-        {createdWishlistId && (
-          <Pressable
-            onPress={() => navigation.replace('WishlistDetail', { id: createdWishlistId })}
-            style={styles.skipButton}
-          >
-            <Text style={styles.skipButtonText}>{'Пропустить'}</Text>
-          </Pressable>
-        )}
       </View>
     </ScrollView>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         {step === 'create' ? renderCreateStep() : renderAddItemStep()}
+        <View style={styles.footer}>
+          {step === 'create' ? (
+            <PillButton
+              title="Создать"
+              onPress={handleCreateWishlist}
+              loading={isLoading}
+              disabled={!title.trim()}
+            />
+          ) : (
+            <>
+              <PillButton
+                title="Добавить в список"
+                onPress={handleAddItem}
+                loading={addingItem}
+                disabled={!itemName.trim()}
+              />
+              {createdWishlistId && (
+                <Pressable
+                  onPress={() => navigation.replace('WishlistDetail', { id: createdWishlistId })}
+                  style={styles.skipButton}
+                >
+                  <Text style={styles.skipButtonText}>{'Пропустить'}</Text>
+                </Pressable>
+              )}
+            </>
+          )}
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -625,7 +624,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.huge * 2,
+    paddingBottom: spacing.xl,
   },
 
   // ---- Header ----
@@ -655,9 +654,7 @@ const styles = StyleSheet.create({
   },
 
   // ---- Form ----
-  form: {
-    flex: 1,
-  },
+  form: {},
   sectionContainer: {
     marginBottom: spacing.xl,
   },
@@ -738,9 +735,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // ---- Button ----
-  buttonContainer: {
-    marginTop: spacing.xl,
+  // ---- Footer ----
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.separator,
   },
 
   // ---- URL Card ----
@@ -833,7 +835,7 @@ const styles = StyleSheet.create({
 
   // ---- Manual section ----
   manualSection: {
-    marginBottom: spacing.huge,
+    marginBottom: spacing.xl,
   },
   manualSectionTitle: {
     ...typography.h4,
