@@ -1,7 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import Config from 'react-native-config';
 import { SecureStorage } from './secureStorage';
-import Config from 'react-native-config';
 
 const API_URL = Config.API_URL || 'https://social-wishlist-production.up.railway.app';
 

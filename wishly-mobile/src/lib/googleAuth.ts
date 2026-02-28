@@ -1,7 +1,6 @@
 import { GoogleSignin, statusCodes, isErrorWithCode } from '@react-native-google-signin/google-signin';
 import Config from 'react-native-config';
 import { useEffect, useState, useCallback } from 'react';
-import Config from 'react-native-config';
 
 // Configure Google Signin
 GoogleSignin.configure({
