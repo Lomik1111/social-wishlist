@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
+import { GradientView } from '../../components/ui/GradientView';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../store/authStore';
 import { Avatar } from '../../components/ui/Avatar';
@@ -140,7 +140,7 @@ export default function ProfileScreen() {
         <View style={styles.profileHeader}>
           {/* Avatar with gradient border */}
           <View style={styles.avatarContainer}>
-            <LinearGradient
+            <GradientView
               colors={gradients.primary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -153,7 +153,7 @@ export default function ProfileScreen() {
                   size={76}
                 />
               </View>
-            </LinearGradient>
+            </GradientView>
             <Pressable
               style={styles.editAvatarButton}
               onPress={() => navigateTo('SettingsPrivacy')}

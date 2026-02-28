@@ -1,7 +1,7 @@
 import React, { memo, useCallback } from 'react';
 import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import LinearGradient from 'react-native-linear-gradient';
+import { GradientView } from '../ui/GradientView';
 import { Badge } from '../ui/Badge';
 import { ProgressBar } from '../ui/ProgressBar';
 import { colors, spacing, radius, typography } from '../../constants/design';
@@ -90,12 +90,12 @@ function ItemCardComponent({ item, onPress, onReserve, showPrices = true }: Item
       {item.image_url ? (
         <Image source={{ uri: item.image_url }} style={styles.image} resizeMode="cover" />
       ) : (
-        <LinearGradient
+        <GradientView
           colors={[colors.surfaceElevated, colors.surface]}
           style={styles.imagePlaceholder}
         >
           <Text style={styles.imagePlaceholderIcon}>{'🎁'}</Text>
-        </LinearGradient>
+        </GradientView>
       )}
 
       {/* Item info */}
@@ -134,7 +134,7 @@ function ItemCardComponent({ item, onPress, onReserve, showPrices = true }: Item
       {/* Reserve button */}
       {!item.is_reserved && (
         <Pressable onPress={handleReserve} style={styles.reserveButton}>
-          <LinearGradient
+          <GradientView
             colors={['#FF2D78', '#FF6B35']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -143,7 +143,7 @@ function ItemCardComponent({ item, onPress, onReserve, showPrices = true }: Item
             <Text style={styles.reserveText}>
               {item.is_group_gift ? 'Участвовать' : 'Забронировать'}
             </Text>
-          </LinearGradient>
+          </GradientView>
         </Pressable>
       )}
 

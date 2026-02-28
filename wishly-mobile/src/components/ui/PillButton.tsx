@@ -1,8 +1,8 @@
 import React from 'react';
 import { Text, Pressable, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import Animated, { useAnimatedStyle, withSpring, useSharedValue } from 'react-native-reanimated';
 import { haptic } from '../../lib/haptics';
+import { GradientView } from './GradientView';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -52,20 +52,20 @@ export function PillButton({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         disabled={disabled || loading}
-        style={[animatedStyle, disabled && styles.disabled, style]}
+        style={[animatedStyle, styles.glowWrapper, disabled && styles.disabled, style]}
       >
-        <LinearGradient
+        <GradientView
           colors={['#FF2D78', '#FF6B35']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
-          style={[styles.gradient, styles.glow]}
+          style={styles.gradient}
         >
           {loading ? (
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
             <Text style={[styles.textPrimary, textStyle]}>{title}</Text>
           )}
-        </LinearGradient>
+        </GradientView>
       </AnimatedPressable>
     );
   }
@@ -106,19 +106,21 @@ export function PillButton({
 }
 
 const styles = StyleSheet.create({
+  glowWrapper: {
+    borderRadius: 999,
+    shadowColor: '#FF2D78',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8,
+  },
   gradient: {
     borderRadius: 999,
     paddingVertical: 16,
     paddingHorizontal: 32,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  glow: {
-    shadowColor: '#FF2D78',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 8,
+    minHeight: 52,
   },
   textPrimary: {
     color: '#FFFFFF',
@@ -132,6 +134,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 52,
   },
   textWhite: {
     color: '#0A0A0F',
@@ -146,6 +149,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+    minHeight: 52,
   },
   textOutline: {
     color: '#FFFFFF',

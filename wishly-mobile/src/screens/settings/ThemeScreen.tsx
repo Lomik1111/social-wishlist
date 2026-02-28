@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
+import { GradientView } from '../../components/ui/GradientView';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, radius, typography, wishlistThemes } from '../../constants/design';
 import { PillButton } from '../../components/ui/PillButton';
@@ -74,7 +74,7 @@ export default function ThemeSettingsScreen() {
           onPress={() => handleSelectTheme(item.key)}
         >
           {/* Gradient Preview */}
-          <LinearGradient
+          <GradientView
             colors={item.gradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -93,7 +93,7 @@ export default function ThemeSettingsScreen() {
                 </View>
               </View>
             )}
-          </LinearGradient>
+          </GradientView>
 
           {/* Theme Info */}
           <View style={styles.themeInfo}>

@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import LinearGradient from 'react-native-linear-gradient';
+import { GradientView } from '../components/ui/GradientView';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import api from '../lib/api';
 import { haptic } from '../lib/haptics';
@@ -63,7 +63,7 @@ const BarChart = React.memo(function BarChart({
               style={chartStyles.barWrapper}
             >
               <View style={chartStyles.barTrack}>
-                <LinearGradient
+                <GradientView
                   colors={[colors.primary, colors.primaryDark]}
                   style={[chartStyles.barFill, { height: barHeight }]}
                 />
@@ -138,14 +138,14 @@ const GiverRow = React.memo(function GiverRow({
 
       {/* Avatar with gradient ring */}
       <View style={giverStyles.avatarRing}>
-        <LinearGradient
+        <GradientView
           colors={gradients.primary}
           style={giverStyles.avatarGradient}
         >
           <View style={giverStyles.avatarInner}>
             <Avatar uri={giver.avatar_url} name={displayName} size={40} />
           </View>
-        </LinearGradient>
+        </GradientView>
       </View>
 
       {/* Info */}
@@ -329,7 +329,7 @@ export default function StatsScreen() {
           entering={FadeInDown.duration(500).springify()}
           style={styles.activityCard}
         >
-          <LinearGradient
+          <GradientView
             colors={['#1E1E2E', '#141420']}
             style={styles.activityCardGradient}
           >
@@ -380,7 +380,7 @@ export default function StatsScreen() {
                 {stats.reserved_count}{' / '}{stats.total_gifts}
               </Text>
             </View>
-          </LinearGradient>
+          </GradientView>
         </Animated.View>
 
         {/* Mini Cards Row */}
@@ -390,7 +390,7 @@ export default function StatsScreen() {
             entering={FadeInDown.delay(150).duration(500).springify()}
             style={styles.miniCard}
           >
-            <LinearGradient
+            <GradientView
               colors={['#1E1E2E', '#141420']}
               style={styles.miniCardGradient}
             >
@@ -401,7 +401,7 @@ export default function StatsScreen() {
               <Text style={styles.miniCardValue} numberOfLines={1}>
                 {stats.top_category || '—'}
               </Text>
-            </LinearGradient>
+            </GradientView>
           </Animated.View>
 
           {/* Average Price */}
@@ -409,7 +409,7 @@ export default function StatsScreen() {
             entering={FadeInDown.delay(250).duration(500).springify()}
             style={styles.miniCard}
           >
-            <LinearGradient
+            <GradientView
               colors={['#1E1E2E', '#141420']}
               style={styles.miniCardGradient}
             >
@@ -422,7 +422,7 @@ export default function StatsScreen() {
                   ? formatPrice(Math.round(stats.avg_price), 'RUB')
                   : '—'}
               </Text>
-            </LinearGradient>
+            </GradientView>
           </Animated.View>
         </View>
 

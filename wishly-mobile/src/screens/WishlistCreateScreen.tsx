@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
+import { GradientView } from '../components/ui/GradientView';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -386,12 +386,12 @@ export default function CreateWishlistScreen() {
                     isSelected && styles.themeCircleSelected,
                   ]}
                 >
-                  <LinearGradient
+                  <GradientView
                     colors={theme.gradient as [string, string]}
                     style={styles.themeCircle}
                   >
                     <Text style={styles.themeIcon}>{theme.icon}</Text>
-                  </LinearGradient>
+                  </GradientView>
                   <Text
                     style={[
                       styles.themeName,
@@ -488,7 +488,7 @@ export default function CreateWishlistScreen() {
             (!itemUrl.trim() || isScanning) && styles.scanButtonDisabled,
           ]}
         >
-          <LinearGradient
+          <GradientView
             colors={
               scanSuccess
                 ? (['#00D68F', '#00B894'] as const)
@@ -511,7 +511,7 @@ export default function CreateWishlistScreen() {
             ) : (
               <Text style={styles.scanButtonText}>{'Распознать товар'}</Text>
             )}
-          </LinearGradient>
+          </GradientView>
         </Pressable>
       </Card>
 

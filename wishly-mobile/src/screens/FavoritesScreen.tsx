@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import LinearGradient from 'react-native-linear-gradient';
+import { GradientView } from '../components/ui/GradientView';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import api from '../lib/api';
 import { haptic } from '../lib/haptics';
@@ -80,14 +80,14 @@ const FavoriteCard = React.memo(function FavoriteCard({
       {item.image_url ? (
         <Image source={{ uri: item.image_url }} style={styles.cardImage} />
       ) : (
-        <LinearGradient
+        <GradientView
           colors={['#2D1B69', '#1A0533']}
           style={styles.cardImage}
         />
       )}
 
       {/* Dark overlay gradient */}
-      <LinearGradient
+      <GradientView
         colors={['transparent', 'rgba(0,0,0,0.85)']}
         style={styles.cardOverlay}
       >
@@ -114,7 +114,7 @@ const FavoriteCard = React.memo(function FavoriteCard({
             </Text>
           )}
         </View>
-      </LinearGradient>
+      </GradientView>
     </AnimatedPressable>
   );
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle, DimensionValue } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
+import { GradientView } from './GradientView';
 
 interface ProgressBarProps {
   progress: number;
@@ -13,7 +13,7 @@ export function ProgressBar({ progress, height = 6, style }: ProgressBarProps) {
 
   return (
     <View style={[styles.track, { height }, style]}>
-      <LinearGradient
+      <GradientView
         colors={['#FF2D78', '#6C5CE7']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}

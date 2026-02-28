@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
+import { GradientView } from '../components/ui/GradientView';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -215,7 +215,7 @@ export default function WishlistDetailScreen() {
               resizeMode="cover"
             />
           ) : null}
-          <LinearGradient
+          <GradientView
             colors={
               currentWishlist?.cover_image_url
                 ? (['transparent', 'rgba(0,0,0,0.85)'] as const)
@@ -283,7 +283,7 @@ export default function WishlistDetailScreen() {
                 <Text style={styles.ownerLabel}>{'Ваш вишлист'}</Text>
               )}
             </View>
-          </LinearGradient>
+          </GradientView>
         </View>
 
         {/* Sort bar */}
