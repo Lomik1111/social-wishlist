@@ -22,11 +22,11 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useWishlistStore } from '../../store/wishlistStore';
-import { useAuthStore } from '../../store/authStore';
-import { ItemCard } from '../../components/wishlist/ItemCard';
-import { Badge } from '../../components/ui/Badge';
-import { Avatar } from '../../components/ui/Avatar';
+import { useWishlistStore } from '../store/wishlistStore';
+import { useAuthStore } from '../store/authStore';
+import { ItemCard } from '../components/wishlist/ItemCard';
+import { Badge } from '../components/ui/Badge';
+import { Avatar } from '../components/ui/Avatar';
 import {
   colors,
   gradients,
@@ -34,10 +34,10 @@ import {
   radius,
   typography,
   wishlistThemes,
-} from '../../constants/design';
-import { formatDate, pluralize } from '../../lib/utils';
-import { haptic } from '../../lib/haptics';
-import { Item } from '../../types';
+} from '../constants/design';
+import { formatDate, pluralize } from '../lib/utils';
+import { haptic } from '../lib/haptics';
+import { Item } from '../types';
 
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');

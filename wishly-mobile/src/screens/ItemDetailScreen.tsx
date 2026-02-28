@@ -25,9 +25,9 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useWishlistStore } from '../../store/wishlistStore';
-import { ProgressBar } from '../../components/ui/ProgressBar';
-import { Badge } from '../../components/ui/Badge';
+import { useWishlistStore } from '../store/wishlistStore';
+import { ProgressBar } from '../components/ui/ProgressBar';
+import { Badge } from '../components/ui/Badge';
 import {
   colors,
   gradients,
@@ -35,11 +35,11 @@ import {
   radius,
   typography,
   shadows,
-} from '../../constants/design';
-import { formatPrice, extractDomain } from '../../lib/utils';
-import { haptic } from '../../lib/haptics';
-import api from '../../lib/api';
-import type { Item } from '../../types';
+} from '../constants/design';
+import { formatPrice, extractDomain } from '../lib/utils';
+import { haptic } from '../lib/haptics';
+import api from '../lib/api';
+import type { Item } from '../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = 340;

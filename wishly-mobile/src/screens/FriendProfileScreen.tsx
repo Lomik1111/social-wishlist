@@ -14,16 +14,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { colors, spacing, radius, typography, gradients, wishlistThemes } from '../../constants/design';
-import { Avatar } from '../../components/ui/Avatar';
-import { Card } from '../../components/ui/Card';
-import { SectionHeader } from '../../components/ui/SectionHeader';
-import { haptic } from '../../lib/haptics';
-import { pluralize } from '../../lib/utils';
-import api from '../../lib/api';
-import { useFriendStore } from '../../store/friendStore';
-import { useAuthStore } from '../../store/authStore';
-import type { UserProfile, PublicWishlist, WishlistPublic } from '../../types';
+import { colors, spacing, radius, typography, gradients, wishlistThemes } from '../constants/design';
+import { Avatar } from '../components/ui/Avatar';
+import { Card } from '../components/ui/Card';
+import { SectionHeader } from '../components/ui/SectionHeader';
+import { haptic } from '../lib/haptics';
+import { pluralize } from '../lib/utils';
+import api from '../lib/api';
+import { useFriendStore } from '../store/friendStore';
+import { useAuthStore } from '../store/authStore';
+import type { UserProfile, PublicWishlist, WishlistPublic } from '../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;
