@@ -3,32 +3,32 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>000000000000-ios.apps.googleusercontent.com</string>
+	<string>704627914628-9m6no8ns1b3if4c86qr9nqod5mi1uroq.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.000000000000-ios</string>
+	<string>com.googleusercontent.apps.704627914628-9m6no8ns1b3if4c86qr9nqod5mi1uroq</string>
 	<key>API_KEY</key>
-	<string>AIzaSyDummyKey</string>
+	<string>AIzaSyCo7Z5fjNFOvp1Bu29npZJifdmjd1zHj68</string>
 	<key>GCM_SENDER_ID</key>
-	<string>000000000000</string>
+	<string>704627914628</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.wishlymobile</string>
 	<key>PROJECT_ID</key>
-	<string>mock-project-id</string>
+	<string>wishly-mobile</string>
 	<key>STORAGE_BUCKET</key>
-	<string>mock-project-id.appspot.com</string>
+	<string>wishly-mobile.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
-	<false/>
+	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
-	<false/>
+	<false></false>
 	<key>IS_APPINVITE_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>IS_GCM_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>IS_SIGNIN_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:000000000000:ios:0000000000000000</string>
+	<string>1:704627914628:ios:7589a11ce320c7cb65cfd1</string>
 </dict>
 </plist>
