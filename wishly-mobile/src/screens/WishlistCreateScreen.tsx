@@ -21,21 +21,21 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useWishlistStore } from '../../store/wishlistStore';
-import { RoundedInput } from '../../components/ui/RoundedInput';
-import { PillButton } from '../../components/ui/PillButton';
-import { Card } from '../../components/ui/Card';
+import { useWishlistStore } from '../store/wishlistStore';
+import { RoundedInput } from '../components/ui/RoundedInput';
+import { PillButton } from '../components/ui/PillButton';
+import { Card } from '../components/ui/Card';
 import {
   colors,
   spacing,
   radius,
   typography,
   wishlistThemes,
-} from '../../constants/design';
-import { haptic } from '../../lib/haptics';
-import { extractDomain } from '../../lib/utils';
-import api from '../../lib/api';
-import type { AutofillResult } from '../../types';
+} from '../constants/design';
+import { haptic } from '../lib/haptics';
+import { extractDomain } from '../lib/utils';
+import api from '../lib/api';
+import type { AutofillResult } from '../types';
 
 type Step = 'create' | 'addItem';
 

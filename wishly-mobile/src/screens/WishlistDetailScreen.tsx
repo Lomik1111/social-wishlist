@@ -39,6 +39,7 @@ import { formatDate, pluralize } from '../lib/utils';
 import { haptic } from '../lib/haptics';
 import { Item } from '../types';
 
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HERO_HEIGHT = 280;
 
@@ -205,6 +206,7 @@ export default function WishlistDetailScreen() {
   const ListHeader = useMemo(
     () => (
       <View>
+        {/* Hero section */}
         <View style={styles.hero}>
           {currentWishlist?.cover_image_url ? (
             <Image
@@ -221,6 +223,7 @@ export default function WishlistDetailScreen() {
             }
             style={styles.heroOverlay}
           >
+            {/* Top navigation row */}
             <View style={styles.heroTopRow}>
               <Pressable onPress={handleBack} style={styles.iconButton}>
                 <Text style={styles.iconButtonText}>{'<'}</Text>
@@ -230,6 +233,7 @@ export default function WishlistDetailScreen() {
               </Pressable>
             </View>
 
+            {/* Badges */}
             <View style={styles.heroBadges}>
               <Badge
                 label={pluralize(
@@ -248,10 +252,12 @@ export default function WishlistDetailScreen() {
               )}
             </View>
 
+            {/* Title */}
             <Text style={styles.heroTitle} numberOfLines={2}>
               {currentWishlist?.title ?? ''}
             </Text>
 
+            {/* Date + avatars row */}
             <View style={styles.heroMeta}>
               {currentWishlist?.event_date && (
                 <View style={styles.dateRow}>
@@ -270,6 +276,7 @@ export default function WishlistDetailScreen() {
               )}
             </View>
 
+            {/* Avatars row (owner) */}
             <View style={styles.avatarRow}>
               <Avatar uri={user?.avatar_url} name={user?.full_name} size={28} />
               {isOwner && (
@@ -279,6 +286,7 @@ export default function WishlistDetailScreen() {
           </LinearGradient>
         </View>
 
+        {/* Sort bar */}
         <View style={styles.sortBar}>
           <Text style={styles.sectionTitle}>
             {'Желания'}
@@ -305,6 +313,7 @@ export default function WishlistDetailScreen() {
   const ListFooter = useMemo(
     () => (
       <View style={styles.footer}>
+        {/* Add recommendation card */}
         <Pressable onPress={handleAddRecommendation} style={styles.addCard}>
           <View style={styles.addCardInner}>
             <Text style={styles.addCardIcon}>{'+'}</Text>
@@ -350,6 +359,7 @@ export default function WishlistDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      {/* Sticky header that appears on scroll */}
       <Animated.View style={[styles.stickyHeader, headerOpacity]}>
         <SafeAreaView edges={['top']} style={styles.stickyHeaderInner}>
           <View style={styles.stickyHeaderContent}>
@@ -387,6 +397,7 @@ export default function WishlistDetailScreen() {
         }
       />
 
+      {/* Menu overlay */}
       {menuVisible && (
         <Pressable style={styles.menuOverlay} onPress={handleMenu}>
           <View style={styles.menuContent}>
@@ -457,6 +468,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.huge,
   },
+
+  // ---- Hero ----
   hero: {
     height: HERO_HEIGHT,
     marginHorizontal: -spacing.lg,
@@ -544,6 +557,8 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
   },
+
+  // ---- Sort bar ----
   sortBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -571,6 +586,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
   },
+
+  // ---- Sticky header ----
   stickyHeader: {
     position: 'absolute',
     top: 0,
@@ -598,6 +615,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: spacing.md,
   },
+
+  // ---- Add card ----
   addCard: {
     borderWidth: 2,
     borderColor: colors.border,
@@ -627,6 +646,8 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     textAlign: 'center',
   },
+
+  // ---- Empty state ----
   emptyState: {
     alignItems: 'center',
     paddingVertical: spacing.huge,
@@ -645,6 +666,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
   },
+
+  // ---- Menu overlay ----
   menuOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.overlay,
@@ -674,6 +697,8 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.separator,
   },
+
+  // ---- Footer ----
   footer: {},
   bottomSpacer: {
     height: spacing.huge,
