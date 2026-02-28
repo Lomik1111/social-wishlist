@@ -5,7 +5,6 @@ export const SecureStorage = {
     try {
       return await EncryptedStorage.getItem(key);
     } catch (error) {
-      if (__DEV__) console.error('SecureStorage.getItem error', error);
       return null;
     }
   },
@@ -13,14 +12,15 @@ export const SecureStorage = {
     try {
       await EncryptedStorage.setItem(key, value);
     } catch (error) {
-      if (__DEV__) console.error('SecureStorage.setItem error', error);
+      if (__DEV__) console.warn('SecureStorage.setItem error', error);
     }
   },
   deleteItem: async (key: string) => {
     try {
       await EncryptedStorage.removeItem(key);
     } catch (error) {
-      if (__DEV__) console.error('SecureStorage.deleteItem error', error);
+      // Игнорируем ошибку: библиотека ругается, если ключа и так не было в хранилище,
+      // что для нас означает успешное удаление.
     }
   },
 };

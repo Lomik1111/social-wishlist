@@ -41,7 +41,7 @@ const OCCASION_EMOJIS: Record<string, string> = {
 export default function FriendProfileScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const {  username  } = route.params || {};
+  const { username } = route.params || {};
   useEffect(() => {
     if (!username || !/^[a-zA-Z0-9_]{3,50}$/.test(username)) {
       navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
@@ -63,7 +63,6 @@ export default function FriendProfileScreen() {
       const found = data.find((u: UserProfile) => u.username === username);
       if (found) {
         setProfile(found);
-        // Check if already friends
         const friendMatch = friends.find(
           (f) => f.user?.id === found.id
         );
@@ -78,7 +77,6 @@ export default function FriendProfileScreen() {
     if (!username) return;
     try {
       const { data } = await api.get(`/wishlists/friends`);
-      // Filter wishlists belonging to this user
       const userWishlists = data.filter(
         (w: WishlistPublic) => w.owner_username === username
       );
@@ -136,7 +134,6 @@ export default function FriendProfileScreen() {
 
   const handleMore = useCallback(() => {
     haptic.light();
-    // Future: show action sheet
   }, []);
 
   const getThemeGradient = (themeKey: string): readonly [string, string] => {
@@ -164,16 +161,16 @@ export default function FriendProfileScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <Pressable onPress={handleBack} hitSlop={12}>
-            <Text style={styles.backArrow}>{'\u2039'}</Text>
+            <Text style={styles.backArrow}>{'‹'}</Text>
           </Pressable>
-          <Text style={styles.headerTitle}>{'\u041F\u0420\u041E\u0424\u0418\u041B\u042C'}</Text>
+          <Text style={styles.headerTitle}>{'ПРОФИЛЬ'}</Text>
           <View style={styles.headerRightPlaceholder} />
         </View>
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>{'\uD83D\uDE14'}</Text>
-          <Text style={styles.emptyTitle}>{'\u041F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D'}</Text>
+          <Text style={styles.emptyIcon}>{'😔'}</Text>
+          <Text style={styles.emptyTitle}>{'Пользователь не найден'}</Text>
           <Text style={styles.emptySubtitle}>
-            {'\u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0438\u043C\u044F \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044F \u0438 \u043F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0441\u043D\u043E\u0432\u0430'}
+            {'Проверьте имя пользователя и попробуйте снова'}
           </Text>
         </View>
       </SafeAreaView>
@@ -181,21 +178,20 @@ export default function FriendProfileScreen() {
   }
 
   const statsData = [
-    { label: '\u0421\u041F\u0418\u0421\u041A\u041E\u0412', value: wishlists.length },
-    { label: '\u041F\u041E\u0414\u0410\u0420\u041A\u041E\u0412', value: wishlists.reduce((sum, w) => sum + w.item_count, 0) },
-    { label: '\u0414\u0420\u0423\u0417\u0415\u0419', value: profile.friends_count ?? 0 },
+    { label: 'СПИСКОВ', value: wishlists.length },
+    { label: 'ПОДАРКОВ', value: wishlists.reduce((sum, w) => sum + w.item_count, 0) },
+    { label: 'ДРУЗЕЙ', value: profile.friends_count ?? 0 },
   ];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header / Navbar */}
       <View style={styles.header}>
         <Pressable onPress={handleBack} hitSlop={12}>
-          <Text style={styles.backArrow}>{'\u2039'}</Text>
+          <Text style={styles.backArrow}>{'‹'}</Text>
         </Pressable>
-        <Text style={styles.headerTitle}>{'\u041F\u0420\u041E\u0424\u0418\u041B\u042C'}</Text>
+        <Text style={styles.headerTitle}>{'ПРОФИЛЬ'}</Text>
         <Pressable onPress={handleMore} hitSlop={12}>
-          <Text style={styles.moreButton}>{'\u22EF'}</Text>
+          <Text style={styles.moreButton}>{'⋯'}</Text>
         </Pressable>
       </View>
 
@@ -210,9 +206,7 @@ export default function FriendProfileScreen() {
           />
         }
       >
-        {/* Hero Section */}
         <View style={styles.heroSection}>
-          {/* Avatar with gradient border */}
           <View style={styles.avatarWrapper}>
             <GradientView
               colors={gradients.primary}
@@ -231,24 +225,21 @@ export default function FriendProfileScreen() {
             {profile.is_online && <View style={styles.onlineDot} />}
           </View>
 
-          {/* Name & Username */}
-          <Text style={styles.profileName}>{profile.full_name || '\u041F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C'}</Text>
+          <Text style={styles.profileName}>{profile.full_name || 'Пользователь'}</Text>
           <Text style={styles.profileUsername}>@{profile.username || 'user'}</Text>
 
-          {/* Bio */}
           {profile.bio ? (
             <Text style={styles.profileBio}>{profile.bio}</Text>
           ) : null}
 
-          {/* Friend Button */}
           {isFriend ? (
             <Pressable style={styles.friendButton} onPress={handleToggleFriend}>
-              <Text style={styles.friendButtonIcon}>{'\u2713'}</Text>
-              <Text style={styles.friendButtonText}>{'\u0412\u044B \u043F\u043E\u0434\u043F\u0438\u0441\u0430\u043D\u044B'}</Text>
+              <Text style={styles.friendButtonIcon}>{'✓'}</Text>
+              <Text style={styles.friendButtonText}>{'Вы подписаны'}</Text>
             </Pressable>
           ) : requestSent ? (
             <Pressable style={styles.requestSentButton} disabled>
-              <Text style={styles.requestSentText}>{'\u0417\u0430\u043F\u0440\u043E\u0441 \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u0435\u043D'}</Text>
+              <Text style={styles.requestSentText}>{'Запрос отправлен'}</Text>
             </Pressable>
           ) : (
             <Pressable style={styles.addFriendButton} onPress={handleToggleFriend}>
@@ -264,7 +255,6 @@ export default function FriendProfileScreen() {
           )}
         </View>
 
-        {/* Stats Row */}
         <View style={styles.statsRow}>
           {statsData.map((stat, index) => (
             <Card key={stat.label} style={styles.statCard}>
@@ -274,10 +264,9 @@ export default function FriendProfileScreen() {
           ))}
         </View>
 
-        {/* Public Wishlists Section */}
         <View style={styles.wishlistsSection}>
           <SectionHeader
-            title={`\u041F\u0443\u0431\u043B\u0438\u0447\u043D\u044B\u0435 \u0441\u043F\u0438\u0441\u043A\u0438 \u00B7 ${wishlists.length}`}
+            title={`Публичные списки · ${wishlists.length}`}
           />
 
           <View style={styles.wishlistsGrid}>
@@ -295,7 +284,6 @@ export default function FriendProfileScreen() {
                     colors={themeGradient}
                     style={styles.wishlistCardGradient}
                   >
-                    {/* Emoji Grid 2x2 */}
                     <View style={styles.emojiGrid}>
                       <View style={styles.emojiRow}>
                         <Text style={styles.emojiItem}>{emojis[0]}</Text>
@@ -313,20 +301,19 @@ export default function FriendProfileScreen() {
                   <Text style={styles.wishlistCount}>
                     {pluralize(
                       wishlist.item_count,
-                      '\u043F\u043E\u0434\u0430\u0440\u043E\u043A',
-                      '\u043F\u043E\u0434\u0430\u0440\u043A\u0430',
-                      '\u043F\u043E\u0434\u0430\u0440\u043A\u043E\u0432',
+                      'подарок',
+                      'подарка',
+                      'подарков',
                     )}
                   </Text>
                 </Pressable>
               );
             })}
 
-            {/* Suggest List Card */}
             <Pressable style={styles.suggestCard}>
               <View style={styles.suggestCardInner}>
-                <Text style={styles.suggestIcon}>{'\u002B'}</Text>
-                <Text style={styles.suggestText}>{'\u041F\u0440\u0435\u0434\u043B\u043E\u0436\u0438\u0442\u044C\n\u0441\u043F\u0438\u0441\u043E\u043A'}</Text>
+                <Text style={styles.suggestIcon}>{'+'}</Text>
+                <Text style={styles.suggestText}>{'Предложить\nсписок'}</Text>
               </View>
             </Pressable>
           </View>
@@ -346,8 +333,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -377,12 +362,9 @@ const styles = StyleSheet.create({
   headerRightPlaceholder: {
     width: 28,
   },
-
   scrollContent: {
     paddingBottom: 40,
   },
-
-  // Hero
   heroSection: {
     alignItems: 'center',
     paddingTop: spacing.xxl,
@@ -437,8 +419,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     paddingHorizontal: spacing.xxxl,
   },
-
-  // Friend Button
   friendButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -459,7 +439,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.info,
   },
-
   requestSentButton: {
     backgroundColor: colors.surface,
     borderRadius: radius.full,
@@ -474,7 +453,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
   },
-
   addFriendButton: {
     marginTop: spacing.xl,
   },
@@ -489,8 +467,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
   },
-
-  // Stats
   statsRow: {
     flexDirection: 'row',
     paddingHorizontal: spacing.xl,
@@ -514,8 +490,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-
-  // Wishlists
   wishlistsSection: {
     paddingHorizontal: spacing.xl,
     marginTop: spacing.xxl,
@@ -565,8 +539,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2,
   },
-
-  // Suggest Card
   suggestCard: {
     width: CARD_WIDTH,
     aspectRatio: 1,
@@ -593,8 +565,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
   },
-
-  // Empty State
   emptyState: {
     flex: 1,
     alignItems: 'center',

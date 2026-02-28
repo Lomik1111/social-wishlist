@@ -1,10 +1,14 @@
 import { GoogleSignin, statusCodes, isErrorWithCode } from '@react-native-google-signin/google-signin';
-import Config from 'react-native-config';
 import { useEffect, useState, useCallback } from 'react';
+
+// Вписываем ключи жестко в код для надежности
+const WEB_CLIENT_ID = '704627914628-e7c6k80mitr04nkjg10gj1tu5duhpi67.apps.googleusercontent.com';
+const IOS_CLIENT_ID = '704627914628-9m6no8ns1b3if4c86qr9nqod5mi1uroq.apps.googleusercontent.com';
 
 // Configure Google Signin
 GoogleSignin.configure({
-  webClientId: Config.GOOGLE_WEB_CLIENT_ID,
+  webClientId: WEB_CLIENT_ID,
+  iosClientId: IOS_CLIENT_ID,
   offlineAccess: true,
 });
 

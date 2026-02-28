@@ -99,7 +99,6 @@ export default function ItemDetailScreen() {
     transform: [{ scale: buttonScale.value }],
   }));
 
-  // Try to find item from store first, then fetch from API
   useEffect(() => {
     if (!id) return;
 
@@ -113,7 +112,6 @@ export default function ItemDetailScreen() {
         setSliderValue(25);
       }
     } else {
-      // Fetch from API
       (async () => {
         try {
           const { data } = await api.get(`/items/${id}`);
@@ -147,7 +145,6 @@ export default function ItemDetailScreen() {
           : `Посмотри подарок: ${item.name}`,
       });
     } catch {
-      // User cancelled
     }
   }, [item]);
 
@@ -161,7 +158,6 @@ export default function ItemDetailScreen() {
       haptic.light();
       Linking.openURL(item.url);
     } catch {
-      // Invalid URL — do nothing
     }
   }, [item]);
 
@@ -247,7 +243,6 @@ export default function ItemDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      {/* Top navigation - floating */}
       <View style={styles.floatingNav}>
         <SafeAreaView edges={['top']}>
           <View style={styles.floatingNavRow}>
@@ -274,7 +269,6 @@ export default function ItemDetailScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Large product photo */}
         <View style={styles.imageContainer}>
           {item.image_url ? (
             <Animated.Image
@@ -296,16 +290,13 @@ export default function ItemDetailScreen() {
           />
         </View>
 
-        {/* Content */}
         <View style={styles.content}>
-          {/* Source domain */}
           {item.source_domain && (
             <Text style={styles.sourceDomain}>
               {item.source_domain.toUpperCase()}
             </Text>
           )}
 
-          {/* Badges row */}
           <View style={styles.badgeRow}>
             {item.is_reserved ? (
               <Badge label="Забронировано" variant="warning" />
@@ -321,17 +312,14 @@ export default function ItemDetailScreen() {
             )}
           </View>
 
-          {/* Item name */}
           <Text style={styles.itemName}>{item.name}</Text>
 
-          {/* Price */}
           {item.price !== null && (
             <Text style={styles.price}>
               {formatPrice(item.price, item.currency)}
             </Text>
           )}
 
-          {/* Group gift contribution section */}
           {item.is_group_gift && item.price !== null && (
             <View style={styles.contributionSection}>
               <View style={styles.contributionHeader}>
@@ -367,7 +355,6 @@ export default function ItemDetailScreen() {
                     {formatPrice(contributionAmount, item.currency)}
                   </Text>
 
-                  {/* Simple slider using pressable buttons */}
                   <View style={styles.sliderRow}>
                     <Pressable
                       onPress={() => handleSliderStep('down')}
@@ -402,7 +389,6 @@ export default function ItemDetailScreen() {
             </View>
           )}
 
-          {/* Description */}
           {item.description && (
             <View style={styles.descriptionSection}>
               <Text style={styles.descriptionTitle}>{'Описание'}</Text>
@@ -410,7 +396,6 @@ export default function ItemDetailScreen() {
             </View>
           )}
 
-          {/* Source link */}
           {item.url && (
             <Pressable onPress={handleOpenExternal} style={styles.sourceLink}>
               <View style={styles.sourceLinkContent}>
@@ -423,12 +408,10 @@ export default function ItemDetailScreen() {
             </Pressable>
           )}
 
-          {/* Bottom spacer for fixed button */}
           <View style={styles.bottomSpacer} />
         </View>
       </Animated.ScrollView>
 
-      {/* Bottom fixed reserve button */}
       {!item.is_reserved && (
         <View style={styles.bottomBar}>
           <GradientView
@@ -494,8 +477,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 120,
   },
-
-  // ---- Floating nav ----
   floatingNav: {
     position: 'absolute',
     top: 0,
@@ -527,8 +508,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
   },
-
-  // ---- Image ----
   imageContainer: {
     height: IMAGE_HEIGHT,
     overflow: 'hidden',
@@ -554,8 +533,6 @@ const styles = StyleSheet.create({
     right: 0,
     height: 80,
   },
-
-  // ---- Content ----
   content: {
     paddingHorizontal: spacing.xl,
     marginTop: -spacing.xl,
@@ -583,8 +560,6 @@ const styles = StyleSheet.create({
     letterSpacing: -1.5,
     marginBottom: spacing.xl,
   },
-
-  // ---- Contribution ----
   contributionSection: {
     backgroundColor: colors.surfaceCard,
     borderRadius: radius.xl,
@@ -622,8 +597,6 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.textSecondary,
   },
-
-  // ---- Slider ----
   sliderSection: {
     marginTop: spacing.xl,
     paddingTop: spacing.xl,
@@ -688,8 +661,6 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textTertiary,
   },
-
-  // ---- Description ----
   descriptionSection: {
     marginBottom: spacing.xl,
   },
@@ -703,8 +674,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 24,
   },
-
-  // ---- Source link ----
   sourceLink: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -732,8 +701,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginLeft: spacing.md,
   },
-
-  // ---- Bottom bar ----
   bottomBar: {
     position: 'absolute',
     bottom: 0,
