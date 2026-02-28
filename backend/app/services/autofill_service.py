@@ -68,7 +68,8 @@ _SKIP_IMAGE_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 _PREFER_IMAGE_PATTERNS = re.compile(
-    r"product|item|goods|catalog|photo|gallery|main|detail|hero|large|zoom",
+    r"product|item|goods|catalog|photo|gallery|main|detail|hero|large|zoom"
+    r"|ozone\.ru|wb\.ru|basket-\d|wbbasket|ir\.ozone|cdn1\.ozone",
     re.IGNORECASE,
 )
 
@@ -573,45 +574,58 @@ def _extract_site_specific(url: str, soup: BeautifulSoup, html: str) -> dict:
 
 def _parse_ozon(soup: BeautifulSoup, html: str) -> dict:
     data: dict = {"_score": 80, "currency": "RUB"}
+    # h1 is more reliable than og:title which can return "OZON" or cut product name
     data["title"] = _first_non_empty(
-        _get_og(soup, "og:title"), _extract_title_from_dom(soup),
+        _extract_title_from_dom(soup), _get_og(soup, "og:title"),
     )
     data["description"] = _first_non_empty(
         _get_og(soup, "og:description"), _extract_description_from_dom(soup),
     )
+    # og:image on Ozon product pages is usually the product photo (ir.ozone.ru CDN)
     data["image_url"] = _first_non_empty(
         _get_og(soup, "og:image"),
         _extract_best_image(soup, "https://ozon.ru"),
     )
     data["price"] = _extract_price_from_patterns(html, [
-        r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
-        r'"finalPrice"\s*:\s*(\d+(?:[.,]\d+)?)',
         r'"cardPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"finalPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"discountedPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"originalPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"minimalPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
     ])
     return data
 
 
 def _parse_wildberries(soup: BeautifulSoup, html: str) -> dict:
     data: dict = {"_score": 80, "currency": "RUB"}
+    # h1 is more reliable than og:title on WB
     data["title"] = _first_non_empty(
-        _get_og(soup, "og:title"), _extract_title_from_dom(soup),
+        _extract_title_from_dom(soup), _get_og(soup, "og:title"),
     )
     data["image_url"] = _first_non_empty(
         _get_og(soup, "og:image"),
         _extract_best_image(soup, "https://wildberries.ru"),
     )
-    data["price"] = _extract_price_from_patterns(html, [
+    # WB stores prices in kopecks in salePriceU/priceU — divide by 100
+    # plain "price" key is usually already in rubles
+    price = _extract_price_from_patterns(html, [
         r'"salePriceU"\s*:\s*(\d+)',
         r'"priceU"\s*:\s*(\d+)',
-        r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
     ], divide_by=100)
+    if price is None:
+        price = _extract_price_from_patterns(html, [
+            r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+            r'"salePrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        ])
+    data["price"] = price
     return data
 
 
 def _parse_dns(soup: BeautifulSoup, html: str) -> dict:
     data: dict = {"_score": 80, "currency": "RUB"}
     data["title"] = _first_non_empty(
-        _get_og(soup, "og:title"), _extract_title_from_dom(soup),
+        _extract_title_from_dom(soup), _get_og(soup, "og:title"),
     )
     data["image_url"] = _first_non_empty(
         _get_og(soup, "og:image"),
@@ -620,6 +634,7 @@ def _parse_dns(soup: BeautifulSoup, html: str) -> dict:
     data["price"] = _extract_price_from_patterns(html, [
         r'"price"\s*:\s*(\d+(?:[.,]\d+)?)',
         r'"priceValue"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"discountPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
     ])
     return data
 
@@ -627,16 +642,17 @@ def _parse_dns(soup: BeautifulSoup, html: str) -> dict:
 def _parse_mvideo(soup: BeautifulSoup, html: str) -> dict:
     data: dict = {"_score": 80, "currency": "RUB"}
     data["title"] = _first_non_empty(
-        _get_og(soup, "og:title"), _extract_title_from_dom(soup),
+        _extract_title_from_dom(soup), _get_og(soup, "og:title"),
     )
     data["image_url"] = _first_non_empty(
         _get_og(soup, "og:image"),
         _extract_best_image(soup, "https://mvideo.ru"),
     )
     data["price"] = _extract_price_from_patterns(html, [
-        r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
         r'"finalPrice"\s*:\s*(\d+(?:[.,]\d+)?)',
+        r'"discountedPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
         r'"basePrice"\s*:\s*(\d+(?:[.,]\d+)?)',
+        r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
     ])
     return data
 
@@ -644,7 +660,7 @@ def _parse_mvideo(soup: BeautifulSoup, html: str) -> dict:
 def _parse_lamoda(soup: BeautifulSoup, html: str) -> dict:
     data: dict = {"_score": 80, "currency": "RUB"}
     data["title"] = _first_non_empty(
-        _get_og(soup, "og:title"), _extract_title_from_dom(soup),
+        _extract_title_from_dom(soup), _get_og(soup, "og:title"),
     )
     data["image_url"] = _first_non_empty(
         _get_og(soup, "og:image"),
@@ -653,6 +669,7 @@ def _parse_lamoda(soup: BeautifulSoup, html: str) -> dict:
     data["price"] = _extract_price_from_patterns(html, [
         r'"price"\s*:\s*(\d+(?:[.,]\d+)?)',
         r'"finalPrice"\s*:\s*(\d+(?:[.,]\d+)?)',
+        r'"discountedPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
     ])
     return data
 
@@ -812,15 +829,25 @@ def _extract_fallback(soup: BeautifulSoup, html: str, base_url: str, domain: str
 
 def _extract_title_from_dom(soup: BeautifulSoup) -> str | None:
     for selector in [
+        # Generic
         "h1",
         "[data-testid='product-title']",
+        "[data-widget='webProductHeading'] h1",
+        # Ozon-specific
+        "[data-testid='ozon-product-title']",
+        ".product-page__title",
+        # Wildberries-specific
+        ".product-page__header h1",
+        ".same-part-kt__header",
+        # Generic fallbacks
         ".product-title",
         ".pdp-title",
+        "[itemprop='name']",
     ]:
         el = soup.select_one(selector)
         if isinstance(el, Tag):
             text = el.get_text(" ", strip=True)
-            if text:
+            if text and len(text) > 3:
                 return text
     return None
 
