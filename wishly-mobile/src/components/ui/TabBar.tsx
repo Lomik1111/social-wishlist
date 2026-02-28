@@ -7,10 +7,10 @@ import { haptic } from '../../lib/haptics';
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const TAB_ICONS: Record<string, { active: string; inactive: string; label: string }> = {
-  Dashboard: { active: '\u{1F3E0}', inactive: '\u{1F3E0}', label: '\u0413\u043B\u0430\u0432\u043D\u0430\u044F' },
-  Explore: { active: '\u{1F50D}', inactive: '\u{1F50D}', label: '\u041F\u043E\u0438\u0441\u043A' },
-  Reservations: { active: '\u{1F4CB}', inactive: '\u{1F4CB}', label: '\u0411\u0440\u043E\u043D\u0438' },
-  Profile: { active: '\u{1F464}', inactive: '\u{1F464}', label: '\u041F\u0440\u043E\u0444\u0438\u043B\u044C' },
+  Dashboard: { active: '🏠', inactive: '🏠', label: 'Главная' },
+  Explore: { active: '🔍', inactive: '🔍', label: 'Поиск' },
+  Reservations: { active: '📋', inactive: '📋', label: 'Брони' },
+  Profile: { active: '👤', inactive: '👤', label: 'Профиль' },
 };
 
 interface TabBarProps {

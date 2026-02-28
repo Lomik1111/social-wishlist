@@ -31,27 +31,34 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 USER_AGENTS = [
-    # iPhone Safari
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
-    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    # Windows Chrome (latest) — most common, best compatibility
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     # macOS Chrome
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    # Windows Chrome
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     # Windows Edge
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
+    # Firefox on Windows
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0",
+    # macOS Safari
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15",
     # Android Chrome
-    "Mozilla/5.0 (Linux; Android 14; Pixel 8) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+    "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+    # iPhone Safari
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
 ]
 
 _ACCEPT_HEADER = (
     "text/html,application/xhtml+xml,application/xml;"
-    "q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
+    "q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
 )
+
+_ACCEPT_ENCODING = "gzip, deflate, br"
 
 _IMAGE_ATTRS = [
     "src",
@@ -92,7 +99,9 @@ _CURRENCY_MAP: list[tuple[re.Pattern, str]] = [
 _RUB_DOMAINS = {
     "ozon.ru", "wildberries.ru", "dns-shop.ru", "mvideo.ru",
     "lamoda.ru", "eldorado.ru", "citilink.ru", "sbermegamarket.ru",
-    "market.yandex.ru", "aliexpress.ru",
+    "megamarket.ru", "market.yandex.ru", "aliexpress.ru",
+    "detmir.ru", "sportmaster.ru", "avito.ru", "technopark.ru",
+    "re-store.ru", "rendez-vous.ru", "perekrestok.ru",
 }
 
 
@@ -235,6 +244,9 @@ async def fetch_metadata(url: str) -> dict:
     html: str | None = None
     last_status: int | None = None
 
+    parsed_url = urlparse(url)
+    origin = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
     for attempt in range(3):
         try:
             ua = USER_AGENTS[attempt % len(USER_AGENTS)]
@@ -242,12 +254,22 @@ async def fetch_metadata(url: str) -> dict:
                 "User-Agent": ua,
                 "Accept": _ACCEPT_HEADER,
                 "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+                "Accept-Encoding": _ACCEPT_ENCODING,
+                "Referer": origin + "/",
+                "Origin": origin,
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "same-origin",
+                "Sec-Fetch-User": "?1",
+                "Upgrade-Insecure-Requests": "1",
+                "Cache-Control": "max-age=0",
+                "Connection": "keep-alive",
             }
             client = get_http_client()
             response = await client.get(
                 url,
                 headers=headers,
-                timeout=15.0,
+                timeout=20.0,
                 follow_redirects=True,
             )
             last_status = response.status_code
@@ -566,6 +588,45 @@ def _extract_site_specific(url: str, soup: BeautifulSoup, html: str) -> dict:
         "www.market.yandex.ru": _parse_yandex_market,
         "sbermegamarket.ru": _parse_sbermegamarket,
         "www.sbermegamarket.ru": _parse_sbermegamarket,
+        "megamarket.ru": _parse_megamarket,
+        "www.megamarket.ru": _parse_megamarket,
+        "www.citilink.ru": _parse_citilink,
+        "citilink.ru": _parse_citilink,
+        "www.eldorado.ru": _parse_eldorado,
+        "eldorado.ru": _parse_eldorado,
+        "www.detmir.ru": _parse_detmir,
+        "detmir.ru": _parse_detmir,
+        "www.sportmaster.ru": _parse_sportmaster,
+        "sportmaster.ru": _parse_sportmaster,
+        "www.avito.ru": _parse_avito,
+        "avito.ru": _parse_avito,
+        "www.aliexpress.com": _parse_aliexpress,
+        "aliexpress.com": _parse_aliexpress,
+        "www.aliexpress.ru": _parse_aliexpress,
+        "aliexpress.ru": _parse_aliexpress,
+        "www.amazon.com": _parse_amazon,
+        "amazon.com": _parse_amazon,
+        "www.amazon.co.uk": _parse_amazon,
+        "amazon.co.uk": _parse_amazon,
+        "www.amazon.de": _parse_amazon,
+        "amazon.de": _parse_amazon,
+        "www.etsy.com": _parse_etsy,
+        "etsy.com": _parse_etsy,
+        "www.stylemarker.ru": _parse_generic_russian,
+        "stylemarker.ru": _parse_generic_russian,
+        "www.rendez-vous.ru": _parse_generic_russian,
+        "rendez-vous.ru": _parse_generic_russian,
+        "www.technopark.ru": _parse_generic_russian,
+        "technopark.ru": _parse_generic_russian,
+        "www.re-store.ru": _parse_generic_russian,
+        "re-store.ru": _parse_generic_russian,
+        "www.samsung.com": _parse_generic_shop,
+        "samsung.com": _parse_generic_shop,
+        "www.apple.com": _parse_generic_shop,
+        "apple.com": _parse_generic_shop,
+        "store.steampowered.com": _parse_steam,
+        "www.perekrestok.ru": _parse_generic_russian,
+        "perekrestok.ru": _parse_generic_russian,
     }
 
     parser = parsers.get(host)
@@ -725,6 +786,363 @@ def _parse_sbermegamarket(soup: BeautifulSoup, html: str) -> dict:
     return data
 
 
+def _parse_megamarket(soup: BeautifulSoup, html: str) -> dict:
+    """Megamarket (megamarket.ru) — formerly SberMegaMarket, now standalone."""
+    data: dict = {"_score": 80, "currency": "RUB"}
+
+    # Title: h1 is most reliable; og:title may contain branding suffix
+    title = _extract_title_from_dom(soup)
+    if not title:
+        og_title = _get_og(soup, "og:title")
+        if og_title:
+            title = re.sub(
+                r"\s*[|–—]\s*(Мегамаркет|MegaMarket|megamarket\.ru).*$",
+                "", og_title, flags=re.IGNORECASE,
+            ).strip() or None
+    data["title"] = title
+
+    # Description
+    data["description"] = _first_non_empty(
+        _get_og(soup, "og:description"),
+        _extract_description_from_dom(soup),
+    )
+
+    # Image
+    data["image_url"] = _first_non_empty(
+        _get_og(soup, "og:image"),
+        _get_meta(soup, "twitter:image"),
+        _extract_best_image(soup, "https://megamarket.ru"),
+    )
+
+    # Price — Megamarket is a Next.js SPA; try many patterns
+    data["price"] = _extract_price_from_patterns(html, [
+        # Next.js / hydration state patterns
+        r'"finalPrice"\s*:\s*(\d+(?:[.,]\d+)?)',
+        r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"priceFrom"\s*:\s*(\d+(?:[.,]\d+)?)',
+        r'"priceTo"\s*:\s*(\d+(?:[.,]\d+)?)',
+        r'"salePrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"basePrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"discountedPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"offerPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"currentPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"totalPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"salePriceU"\s*:\s*(\d+)',
+        r'"realPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"lowestPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"minPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"amount"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        # Visible price in HTML text
+        r'(\d[\d\s\u00a0]*)\s*₽',
+    ])
+    return data
+
+
+def _parse_citilink(soup: BeautifulSoup, html: str) -> dict:
+    data: dict = {"_score": 80, "currency": "RUB"}
+    data["title"] = _first_non_empty(
+        _extract_title_from_dom(soup), _get_og(soup, "og:title"),
+    )
+    data["image_url"] = _first_non_empty(
+        _get_og(soup, "og:image"),
+        _extract_best_image(soup, "https://citilink.ru"),
+    )
+    data["price"] = _extract_price_from_patterns(html, [
+        r'"price"\s*:\s*(\d+(?:[.,]\d+)?)',
+        r'"Price"\s*:\s*"(\d+(?:[.,]\d+)?)"',
+        r'"discount_price"\s*:\s*(\d+(?:[.,]\d+)?)',
+        r'"priceWithDiscount"\s*:\s*(\d+(?:[.,]\d+)?)',
+        r'"currentPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'data-price="(\d+(?:[.,]\d+)?)"',
+    ])
+    return data
+
+
+def _parse_eldorado(soup: BeautifulSoup, html: str) -> dict:
+    data: dict = {"_score": 80, "currency": "RUB"}
+    data["title"] = _first_non_empty(
+        _extract_title_from_dom(soup), _get_og(soup, "og:title"),
+    )
+    data["image_url"] = _first_non_empty(
+        _get_og(soup, "og:image"),
+        _extract_best_image(soup, "https://eldorado.ru"),
+    )
+    data["price"] = _extract_price_from_patterns(html, [
+        r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"priceFormatted"\s*:\s*"([\d\s]+)"',
+        r'"specialPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"finalPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"regularPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'data-product-price="(\d+)"',
+    ])
+    return data
+
+
+def _parse_detmir(soup: BeautifulSoup, html: str) -> dict:
+    """Детский мир (detmir.ru)."""
+    data: dict = {"_score": 80, "currency": "RUB"}
+    data["title"] = _first_non_empty(
+        _extract_title_from_dom(soup), _get_og(soup, "og:title"),
+    )
+    data["image_url"] = _first_non_empty(
+        _get_og(soup, "og:image"),
+        _extract_best_image(soup, "https://detmir.ru"),
+    )
+    data["price"] = _extract_price_from_patterns(html, [
+        r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"currentPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"webPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"discountedPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"salePrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+    ])
+    return data
+
+
+def _parse_sportmaster(soup: BeautifulSoup, html: str) -> dict:
+    data: dict = {"_score": 80, "currency": "RUB"}
+    data["title"] = _first_non_empty(
+        _extract_title_from_dom(soup), _get_og(soup, "og:title"),
+    )
+    data["image_url"] = _first_non_empty(
+        _get_og(soup, "og:image"),
+        _extract_best_image(soup, "https://sportmaster.ru"),
+    )
+    data["price"] = _extract_price_from_patterns(html, [
+        r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"currentPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"discountedPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"salePrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"offerPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'data-price="(\d+)"',
+    ])
+    return data
+
+
+def _parse_avito(soup: BeautifulSoup, html: str) -> dict:
+    data: dict = {"_score": 80, "currency": "RUB"}
+
+    # Avito uses og:title reliably
+    data["title"] = _first_non_empty(
+        _get_og(soup, "og:title"),
+        _extract_title_from_dom(soup),
+    )
+    data["description"] = _first_non_empty(
+        _get_og(soup, "og:description"),
+        _extract_description_from_dom(soup),
+    )
+    data["image_url"] = _first_non_empty(
+        _get_og(soup, "og:image"),
+        _extract_best_image(soup, "https://avito.ru"),
+    )
+    data["price"] = _extract_price_from_patterns(html, [
+        r'"price"\s*:\s*\{"value"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"itemPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"priceDetailed"\s*.*?"value"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'(\d[\d\s\u00a0]*)\s*₽',
+    ])
+    return data
+
+
+def _parse_aliexpress(soup: BeautifulSoup, html: str) -> dict:
+    data: dict = {"_score": 80}
+
+    data["title"] = _first_non_empty(
+        _get_og(soup, "og:title"),
+        _extract_title_from_dom(soup),
+    )
+    data["description"] = _first_non_empty(
+        _get_og(soup, "og:description"),
+        _extract_description_from_dom(soup),
+    )
+    data["image_url"] = _first_non_empty(
+        _get_og(soup, "og:image"),
+        _extract_best_image(soup, "https://aliexpress.com"),
+    )
+    # AliExpress shows prices in various currencies
+    price = _extract_price_from_patterns(html, [
+        r'"minActivityAmount"\s*:\s*\{"value"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"promotionPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"salePrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"originalPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"currentPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"activityAmount"\s*.*?"value"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'US\s*\$\s*([\d.,]+)',
+        r'₽\s*([\d\s.,]+)',
+    ])
+    data["price"] = price
+
+    # Detect currency from page
+    if price is not None:
+        if re.search(r'US\s*\$', html):
+            data["currency"] = "USD"
+        elif re.search(r'€', html):
+            data["currency"] = "EUR"
+        elif re.search(r'₽', html):
+            data["currency"] = "RUB"
+        else:
+            data["currency"] = "USD"
+
+    return data
+
+
+def _parse_amazon(soup: BeautifulSoup, html: str) -> dict:
+    data: dict = {"_score": 80}
+
+    # Amazon's og:title is usually clean
+    data["title"] = _first_non_empty(
+        _get_og(soup, "og:title"),
+        _extract_title_from_dom(soup),
+    )
+    data["description"] = _first_non_empty(
+        _get_og(soup, "og:description"),
+        _extract_description_from_dom(soup),
+    )
+    data["image_url"] = _first_non_empty(
+        _get_og(soup, "og:image"),
+        _extract_best_image(soup, "https://amazon.com"),
+    )
+    data["price"] = _extract_price_from_patterns(html, [
+        r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"priceAmount"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"landingPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"buyingPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"listPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"priceToPay"\s*.*?"amount"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"price"\s*:\s*\{"amount"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'\$\s*([\d.,]+)',
+        r'£\s*([\d.,]+)',
+        r'€\s*([\d.,]+)',
+    ])
+
+    # Currency detection for Amazon
+    if data.get("price") is not None:
+        url_host = urlparse(soup.find("link", rel="canonical").get("href", "") if soup.find("link", rel="canonical") else "").hostname or ""  # type: ignore
+        if "amazon.co.uk" in url_host:
+            data["currency"] = "GBP"
+        elif "amazon.de" in url_host or "amazon.fr" in url_host:
+            data["currency"] = "EUR"
+        else:
+            data["currency"] = "USD"
+
+    return data
+
+
+def _parse_etsy(soup: BeautifulSoup, html: str) -> dict:
+    data: dict = {"_score": 80}
+
+    data["title"] = _first_non_empty(
+        _get_og(soup, "og:title"),
+        _extract_title_from_dom(soup),
+    )
+    data["description"] = _first_non_empty(
+        _get_og(soup, "og:description"),
+        _extract_description_from_dom(soup),
+    )
+    data["image_url"] = _first_non_empty(
+        _get_og(soup, "og:image"),
+        _extract_best_image(soup, "https://etsy.com"),
+    )
+    data["price"] = _extract_price_from_patterns(html, [
+        r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"salePrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"listingPrice"\s*.*?"amount"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"price"\s*:\s*\{"amount"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'\$\s*([\d.,]+)',
+        r'€\s*([\d.,]+)',
+    ])
+    if data.get("price") is not None:
+        if re.search(r'€', html[:5000]):
+            data["currency"] = "EUR"
+        else:
+            data["currency"] = "USD"
+
+    return data
+
+
+def _parse_steam(soup: BeautifulSoup, html: str) -> dict:
+    data: dict = {"_score": 80}
+
+    data["title"] = _first_non_empty(
+        _get_og(soup, "og:title"),
+        _extract_title_from_dom(soup),
+    )
+    data["description"] = _first_non_empty(
+        _get_og(soup, "og:description"),
+        _extract_description_from_dom(soup),
+    )
+    data["image_url"] = _first_non_empty(
+        _get_og(soup, "og:image"),
+        _get_meta(soup, "twitter:image"),
+        _extract_best_image(soup, "https://store.steampowered.com"),
+    )
+    data["price"] = _extract_price_from_patterns(html, [
+        r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"final"\s*:\s*(\d+)',  # Steam uses cents
+        r'"initial"\s*:\s*(\d+)',
+        r'(\d+)\s*(?:pуб|₽|USD|\$)',
+    ])
+    # Steam prices in JSON are in cents
+    price_cents = _extract_price_from_patterns(html, [r'"final"\s*:\s*(\d{3,6})'])
+    if price_cents and price_cents > 100:
+        data["price"] = round(price_cents / 100, 2)
+    data["currency"] = "USD"
+
+    return data
+
+
+def _parse_generic_russian(soup: BeautifulSoup, html: str) -> dict:
+    """Generic parser for Russian e-commerce sites."""
+    data: dict = {"_score": 80, "currency": "RUB"}
+    data["title"] = _first_non_empty(
+        _extract_title_from_dom(soup), _get_og(soup, "og:title"),
+    )
+    data["description"] = _first_non_empty(
+        _get_og(soup, "og:description"), _extract_description_from_dom(soup),
+    )
+    data["image_url"] = _first_non_empty(
+        _get_og(soup, "og:image"),
+        _extract_best_image(soup, ""),
+    )
+    data["price"] = _extract_price_from_patterns(html, [
+        r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"finalPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"currentPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"discountedPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"salePrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'data-price="(\d+(?:[.,]\d+)?)"',
+        r'(\d[\d\s\u00a0]*)\s*₽',
+    ])
+    return data
+
+
+def _parse_generic_shop(soup: BeautifulSoup, html: str) -> dict:
+    """Generic parser for international shops (Apple, Samsung, etc.)."""
+    data: dict = {"_score": 80}
+    data["title"] = _first_non_empty(
+        _get_og(soup, "og:title"), _extract_title_from_dom(soup),
+    )
+    data["description"] = _first_non_empty(
+        _get_og(soup, "og:description"), _extract_description_from_dom(soup),
+    )
+    data["image_url"] = _first_non_empty(
+        _get_og(soup, "og:image"),
+        _get_meta(soup, "twitter:image"),
+        _extract_best_image(soup, ""),
+    )
+    data["price"] = _extract_price_from_patterns(html, [
+        r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"salePrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"currentPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'"discountedPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+        r'\$\s*([\d.,]+)',
+        r'€\s*([\d.,]+)',
+        r'(\d[\d\s\u00a0]*)\s*₽',
+    ])
+    return data
+
+
 # ---------------------------------------------------------------------------
 # 4. Open Graph + Twitter Card meta tags
 # ---------------------------------------------------------------------------
@@ -767,31 +1185,84 @@ def _extract_og_meta(soup: BeautifulSoup, domain: str = "") -> dict:
 # 5. Script state (__NEXT_DATA__, etc.)
 # ---------------------------------------------------------------------------
 
+_SPA_STATE_MARKERS = [
+    "__NEXT_DATA__",
+    "__PRELOADED_STATE__",
+    "__INITIAL_STATE__",
+    "__APP_STATE__",
+    "__REDUX_STATE__",
+    "__STATE__",
+    "window.__data",
+    "window.pageData",
+    "window.productData",
+    "window.catalog_data",
+]
+
+_SCRIPT_PRICE_PATTERNS = [
+    r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+    r'"finalPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+    r'"amount"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+    r'"lowPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+    r'"currentPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+    r'"salePrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+    r'"discountedPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+    r'"priceFrom"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+    r'"minPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+    r'"basePrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+    r'"offerPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+    r'"realPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+    r'"webPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+    r'"buyerPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
+    r'"salePriceU"\s*:\s*(\d+)',
+]
+
+
 def _extract_script_state(html: str, domain: str = "") -> dict:
     data: dict = {"_score": 60}
     scripts = re.findall(r"<script[^>]*>(.*?)</script>", html, re.IGNORECASE | re.DOTALL)
 
     for raw in scripts:
-        # next.js data
-        if "__NEXT_DATA__" in raw:
-            parsed = _safe_json_load(_extract_json_object(raw))
-            product = _find_product_in_jsonld(parsed)
-            if product:
-                data["title"] = _first_non_empty(data.get("title"), product.get("name"))
-                data["image_url"] = _first_non_empty(
-                    data.get("image_url"), _extract_image_from_jsonld(product),
-                )
-                if data.get("price") is None:
-                    data["price"] = _extract_price_from_jsonld(product)
+        has_state = any(marker in raw for marker in _SPA_STATE_MARKERS)
 
-        # generic price patterns in script payloads
+        # next.js / preloaded state JSON extraction
+        if has_state:
+            parsed = _safe_json_load(_extract_json_object(raw))
+            if parsed:
+                product = _find_product_in_jsonld(parsed)
+                if product:
+                    data["title"] = _first_non_empty(data.get("title"), product.get("name"))
+                    data["description"] = _first_non_empty(
+                        data.get("description"), product.get("description"),
+                    )
+                    data["image_url"] = _first_non_empty(
+                        data.get("image_url"), _extract_image_from_jsonld(product),
+                    )
+                    if data.get("price") is None:
+                        data["price"] = _extract_price_from_jsonld(product)
+
+                # Also try to extract price from raw JSON state
+                if data.get("price") is None:
+                    data["price"] = _extract_price_from_patterns(raw, _SCRIPT_PRICE_PATTERNS)
+
+                # Try extracting title from known state shapes
+                if not data.get("title") and parsed:
+                    for key in ("name", "title", "productName", "goodsName", "itemName"):
+                        val = _deep_get(parsed, key)
+                        if val and isinstance(val, str) and len(val) > 3:
+                            data["title"] = val
+                            break
+
+                # Try extracting image from state
+                if not data.get("image_url") and parsed:
+                    for key in ("image", "imageUrl", "picture", "photo", "thumbnail", "img"):
+                        val = _deep_get(parsed, key)
+                        if val and isinstance(val, str) and val.startswith("http"):
+                            data["image_url"] = val
+                            break
+
+        # Generic price patterns in any script
         if data.get("price") is None:
-            data["price"] = _extract_price_from_patterns(raw, [
-                r'"price"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
-                r'"finalPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
-                r'"amount"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
-                r'"lowPrice"\s*:\s*"?(\d+(?:[.,]\d+)?)"?',
-            ])
+            data["price"] = _extract_price_from_patterns(raw, _SCRIPT_PRICE_PATTERNS)
 
         if data.get("title") and data.get("image_url") and data.get("price") is not None:
             break
@@ -800,6 +1271,25 @@ def _extract_script_state(html: str, domain: str = "") -> dict:
         data["currency"] = _detect_currency("", domain)
 
     return data
+
+
+def _deep_get(obj: Any, key: str, _depth: int = 0) -> Any:
+    """Recursively search for a key in a nested dict/list structure."""
+    if _depth > 6:
+        return None
+    if isinstance(obj, dict):
+        if key in obj:
+            return obj[key]
+        for v in obj.values():
+            found = _deep_get(v, key, _depth + 1)
+            if found is not None:
+                return found
+    if isinstance(obj, list):
+        for item in obj[:10]:  # limit list search
+            found = _deep_get(item, key, _depth + 1)
+            if found is not None:
+                return found
+    return None
 
 
 # ---------------------------------------------------------------------------

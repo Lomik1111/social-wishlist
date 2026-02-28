@@ -66,7 +66,6 @@ export default function WishlistDetailScreen() {
   const currentItems = useWishlistStore((s) => s.currentItems);
   const isLoading = useWishlistStore((s) => s.isLoading);
   const fetchWishlistById = useWishlistStore((s) => s.fetchWishlistById);
-  const fetchWishlistItems = useWishlistStore((s) => s.fetchWishlistItems);
 
   const [refreshing, setRefreshing] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>('default');
@@ -87,16 +86,15 @@ export default function WishlistDetailScreen() {
   useEffect(() => {
     if (id) {
       fetchWishlistById(id);
-      fetchWishlistItems(id);
     }
-  }, [id, fetchWishlistById, fetchWishlistItems]);
+  }, [id, fetchWishlistById]);
 
   const handleRefresh = useCallback(async () => {
     if (!id) return;
     setRefreshing(true);
-    await Promise.all([fetchWishlistById(id), fetchWishlistItems(id)]);
+    await fetchWishlistById(id);
     setRefreshing(false);
-  }, [id, fetchWishlistById, fetchWishlistItems]);
+  }, [id, fetchWishlistById]);
 
   const handleBack = useCallback(() => {
     haptic.light();
