@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -142,18 +142,9 @@ export default function FavoritesScreen() {
     }
   };
 
-  // Client-side filtering (since API doesn't support filter param)
+  // Client-side filtering
   const filteredItems = useMemo(() => {
-    if (filter === 'all') return items;
-    // Assuming Item has a property to filter by, or just placeholder for now.
-    // Since 'reserved' or 'available' might not be on the Item type in this context directly or logic is custom.
-    // Let's implement a basic filter if properties exist, or leave comment.
-    // Based on filter state 'all' | 'reserved' | 'available'
-    return items.filter(item => {
-      if (filter === 'reserved') return item.is_reserved;
-      if (filter === 'available') return !item.is_reserved;
-      return true;
-    });
+    return items;
   }, [items, filter]);
 
   const handleFilterPress = useCallback((key: FilterType) => {

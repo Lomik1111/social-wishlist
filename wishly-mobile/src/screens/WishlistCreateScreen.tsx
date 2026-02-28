@@ -21,21 +21,21 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useWishlistStore } from '../store/wishlistStore';
-import { RoundedInput } from '../components/ui/RoundedInput';
-import { PillButton } from '../components/ui/PillButton';
-import { Card } from '../components/ui/Card';
+import { useWishlistStore } from '../../store/wishlistStore';
+import { RoundedInput } from '../../components/ui/RoundedInput';
+import { PillButton } from '../../components/ui/PillButton';
+import { Card } from '../../components/ui/Card';
 import {
   colors,
   spacing,
   radius,
   typography,
   wishlistThemes,
-} from '../constants/design';
-import { haptic } from '../lib/haptics';
-import { extractDomain } from '../lib/utils';
-import api from '../lib/api';
-import type { AutofillResult } from '../types';
+} from '../../constants/design';
+import { haptic } from '../../lib/haptics';
+import { extractDomain } from '../../lib/utils';
+import api from '../../lib/api';
+import type { AutofillResult } from '../../types';
 
 type Step = 'create' | 'addItem';
 
@@ -56,10 +56,12 @@ export default function CreateWishlistScreen() {
   const addItem = useWishlistStore((s) => s.addItem);
   const isLoading = useWishlistStore((s) => s.isLoading);
 
+  // Determine initial step based on params
   const [step, setStep] = useState<Step>(
     params.addToWishlist ? 'addItem' : 'create'
   );
 
+  // ---- Create wishlist state ----
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [occasion, setOccasion] = useState('');
@@ -72,6 +74,7 @@ export default function CreateWishlistScreen() {
     params.addToWishlist ?? null
   );
 
+  // ---- Add item state ----
   const [itemUrl, setItemUrl] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [scanSuccess, setScanSuccess] = useState(false);
@@ -82,6 +85,7 @@ export default function CreateWishlistScreen() {
   const [itemImageUrl, setItemImageUrl] = useState('');
   const [addingItem, setAddingItem] = useState(false);
 
+  // ---- Scanning animation ----
   const scanLineY = useSharedValue(0);
 
   const scanLineStyle = useAnimatedStyle(() => ({
@@ -101,6 +105,7 @@ export default function CreateWishlistScreen() {
     scanLineY.value = withTiming(0, { duration: 200 });
   }, [scanLineY]);
 
+  // ---- Handlers ----
   const handleCreateWishlist = useCallback(async () => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
@@ -138,6 +143,7 @@ export default function CreateWishlistScreen() {
       setCreatedWishlistId(wishlist.id);
       haptic.success();
 
+      // Ask if they want to add items
       Alert.alert(
         'Вишлист создан!',
         'Хотите добавить желания в список?',
@@ -162,6 +168,7 @@ export default function CreateWishlistScreen() {
     const url = itemUrl.trim();
     if (!url) return;
 
+    // Basic URL validation
     let normalizedUrl = url;
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       normalizedUrl = `https://${url}`;
@@ -245,6 +252,7 @@ export default function CreateWishlistScreen() {
 
       haptic.success();
 
+      // Reset item fields
       setItemUrl('');
       setItemName('');
       setItemDescription('');
@@ -296,6 +304,7 @@ export default function CreateWishlistScreen() {
   const handleBack = useCallback(() => {
     haptic.light();
     if (step === 'addItem' && !params.addToWishlist) {
+      // If we came from create step and there's a created wishlist, go there
       if (createdWishlistId) {
         navigation.replace('WishlistDetail', { id: createdWishlistId });
       } else {
@@ -306,6 +315,7 @@ export default function CreateWishlistScreen() {
     }
   }, [step, params.addToWishlist, createdWishlistId, navigation]);
 
+  // ---- Render Create Wishlist ----
   const renderCreateStep = () => (
     <ScrollView
       style={styles.scrollView}
@@ -313,6 +323,7 @@ export default function CreateWishlistScreen() {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
+      {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={handleBack} style={styles.backButton}>
           <Text style={styles.backButtonText}>{'<'}</Text>
@@ -321,6 +332,7 @@ export default function CreateWishlistScreen() {
         <View style={styles.backButton} />
       </View>
 
+      {/* Form */}
       <View style={styles.form}>
         <RoundedInput
           label="Название"
@@ -356,6 +368,7 @@ export default function CreateWishlistScreen() {
           icon="📅"
         />
 
+        {/* Theme selector */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionLabel}>{'Тема оформления'}</Text>
           <View style={styles.themeRow}>
@@ -392,6 +405,7 @@ export default function CreateWishlistScreen() {
           </View>
         </View>
 
+        {/* Privacy selector */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionLabel}>{'Приватность'}</Text>
           <View style={styles.privacyRow}>
@@ -421,18 +435,11 @@ export default function CreateWishlistScreen() {
           </View>
         </View>
 
-        <View style={styles.buttonContainer}>
-          <PillButton
-            title="Создать"
-            onPress={handleCreateWishlist}
-            loading={isLoading}
-            disabled={!title.trim()}
-          />
-        </View>
       </View>
     </ScrollView>
   );
 
+  // ---- Render Add Item ----
   const renderAddItemStep = () => (
     <ScrollView
       style={styles.scrollView}
@@ -440,6 +447,7 @@ export default function CreateWishlistScreen() {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
+      {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={handleBack} style={styles.backButton}>
           <Text style={styles.backButtonText}>{'<'}</Text>
@@ -448,6 +456,7 @@ export default function CreateWishlistScreen() {
         <View style={styles.backButton} />
       </View>
 
+      {/* URL autofill section */}
       <Card style={styles.urlCard}>
         <Text style={styles.urlCardTitle}>{'Добавить по ссылке'}</Text>
         <Text style={styles.urlCardSubtitle}>
@@ -468,6 +477,7 @@ export default function CreateWishlistScreen() {
           </View>
         </View>
 
+        {/* Scan button + indicator */}
         <Pressable
           onPress={handleScanUrl}
           disabled={isScanning || !itemUrl.trim()}
@@ -488,6 +498,7 @@ export default function CreateWishlistScreen() {
               <View style={styles.scanningContainer}>
                 <ActivityIndicator color={colors.success} size="small" />
                 <Text style={styles.scanningText}>{'Сканируем...'}</Text>
+                {/* Scanning animation line */}
                 <Animated.View style={[styles.scanLine, scanLineStyle]} />
               </View>
             ) : scanSuccess ? (
@@ -502,6 +513,7 @@ export default function CreateWishlistScreen() {
         </Pressable>
       </Card>
 
+      {/* Autofill result preview */}
       {autofillResult?.image_url && (
         <Card style={styles.previewCard}>
           <Image
@@ -512,6 +524,7 @@ export default function CreateWishlistScreen() {
         </Card>
       )}
 
+      {/* Manual / editable fields */}
       <View style={styles.manualSection}>
         <Text style={styles.manualSectionTitle}>
           {autofillResult ? 'Проверьте данные' : 'Или заполните вручную'}
@@ -554,35 +567,45 @@ export default function CreateWishlistScreen() {
           icon="🖼️"
         />
 
-        <View style={styles.buttonContainer}>
-          <PillButton
-            title="Добавить в список"
-            onPress={handleAddItem}
-            loading={addingItem}
-            disabled={!itemName.trim()}
-          />
-        </View>
-
-        {createdWishlistId && (
-          <Pressable
-            onPress={() => navigation.replace('WishlistDetail', { id: createdWishlistId })}
-            style={styles.skipButton}
-          >
-            <Text style={styles.skipButtonText}>{'Пропустить'}</Text>
-          </Pressable>
-        )}
       </View>
     </ScrollView>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         {step === 'create' ? renderCreateStep() : renderAddItemStep()}
+        <View style={styles.footer}>
+          {step === 'create' ? (
+            <PillButton
+              title="Создать"
+              onPress={handleCreateWishlist}
+              loading={isLoading}
+              disabled={!title.trim()}
+            />
+          ) : (
+            <>
+              <PillButton
+                title="Добавить в список"
+                onPress={handleAddItem}
+                loading={addingItem}
+                disabled={!itemName.trim()}
+              />
+              {createdWishlistId && (
+                <Pressable
+                  onPress={() => navigation.replace('WishlistDetail', { id: createdWishlistId })}
+                  style={styles.skipButton}
+                >
+                  <Text style={styles.skipButtonText}>{'Пропустить'}</Text>
+                </Pressable>
+              )}
+            </>
+          )}
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -601,8 +624,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.huge * 2,
+    paddingBottom: spacing.xl,
   },
+
+  // ---- Header ----
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -627,9 +652,9 @@ const styles = StyleSheet.create({
     ...typography.h3,
     color: colors.textPrimary,
   },
-  form: {
-    flex: 1,
-  },
+
+  // ---- Form ----
+  form: {},
   sectionContainer: {
     marginBottom: spacing.xl,
   },
@@ -639,6 +664,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: spacing.md,
   },
+
+  // ---- Theme selector ----
   themeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -676,6 +703,8 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
   },
+
+  // ---- Privacy selector ----
   privacyRow: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -705,9 +734,18 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
   },
-  buttonContainer: {
-    marginTop: spacing.xl,
+
+  // ---- Footer ----
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.separator,
   },
+
+  // ---- URL Card ----
   urlCard: {
     marginBottom: spacing.xl,
   },
@@ -727,6 +765,8 @@ const styles = StyleSheet.create({
   urlInputWrapper: {
     flex: 1,
   },
+
+  // ---- Scan button ----
   scanButton: {
     borderRadius: radius.lg,
     overflow: 'hidden',
@@ -780,6 +820,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: '700',
   },
+
+  // ---- Preview card ----
   previewCard: {
     marginBottom: spacing.xl,
     padding: 0,
@@ -790,14 +832,18 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: radius.lg,
   },
+
+  // ---- Manual section ----
   manualSection: {
-    marginBottom: spacing.huge,
+    marginBottom: spacing.xl,
   },
   manualSectionTitle: {
     ...typography.h4,
     color: colors.textPrimary,
     marginBottom: spacing.lg,
   },
+
+  // ---- Skip button ----
   skipButton: {
     alignItems: 'center',
     paddingVertical: spacing.lg,
