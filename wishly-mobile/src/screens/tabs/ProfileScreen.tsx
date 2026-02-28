@@ -189,7 +189,7 @@ export default function ProfileScreen() {
           <SettingRow
             icon="📋"
             title="Мои Списки"
-            onPress={() => navigateTo('Main')}
+            onPress={() => navigateTo('Dashboard')}
           />
           <View style={styles.separator} />
           <SettingRow
@@ -225,14 +225,28 @@ export default function ProfileScreen() {
           <SettingRow
             icon="❓"
             title="Помощь"
-            onPress={() => {}}
+            onPress={() => {
+              haptic.light();
+              Alert.alert(
+                'Помощь',
+                'По всем вопросам обращайтесь:\n\n📧 support@wishly.app\n\nВы также можете написать нам через социальные сети — мы отвечаем в течение 24 часов.',
+                [{ text: 'Понятно', style: 'default' }],
+              );
+            }}
           />
           <View style={styles.separator} />
           <SettingRow
             icon="ℹ️"
             title="О приложении"
             rightValue="1.0.0"
-            onPress={() => {}}
+            onPress={() => {
+              haptic.light();
+              Alert.alert(
+                'Wishly 1.0.0',
+                'Социальный вишлист — делитесь желаниями с друзьями и близкими.\n\n© 2024 Wishly Inc.\nВсе права защищены.',
+                [{ text: 'Закрыть', style: 'default' }],
+              );
+            }}
           />
         </SettingsSection>
 

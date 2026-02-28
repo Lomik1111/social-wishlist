@@ -6,6 +6,7 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -56,6 +57,7 @@ export default function ThemeSettingsScreen() {
       navigation.goBack();
     } catch {
       haptic.error();
+      Alert.alert('Ошибка', 'Не удалось применить тему. Проверьте подключение и попробуйте ещё раз.');
     }
   }, [selectedTheme, updateProfile, navigation]);
 

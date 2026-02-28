@@ -180,7 +180,7 @@ export default function CreateWishlistScreen() {
     startScanAnimation();
 
     try {
-      const { data } = await api.post<AutofillResult>('/items/autofill', {
+      const { data } = await api.post<AutofillResult>('/autofill', {
         url: normalizedUrl,
       });
 
