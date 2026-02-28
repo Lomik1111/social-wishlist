@@ -16,7 +16,7 @@ end
 
 target 'WishlyMobile' do
   config = use_native_modules!
-  pod 'RNWorklets', :path => '../node_modules/react-native-worklets'
+  pod 'RNWorklets', :path => '../node_modules/react-native-worklets', :modular_headers => true
 
   use_react_native!(
     :path => config[:reactNativePath],
@@ -32,5 +32,10 @@ target 'WishlyMobile' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+      end
+    end
   end
 end
