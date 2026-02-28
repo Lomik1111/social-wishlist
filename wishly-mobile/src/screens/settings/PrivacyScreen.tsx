@@ -405,16 +405,19 @@ const styles = StyleSheet.create({
   copyButton: {
     backgroundColor: colors.primary,
     borderRadius: radius.md,
-    paddingVertical: spacing.md,
+    paddingVertical: 14,
     paddingHorizontal: spacing.lg,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    minHeight: 44,
   },
   copyButtonCopied: {
     backgroundColor: colors.success,
   },
   copyButtonText: {
-    ...typography.bodySmall,
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '600' as const,
   },
   copyButtonTextCopied: {
     color: '#FFFFFF',

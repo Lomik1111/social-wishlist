@@ -456,14 +456,17 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     backgroundColor: colors.primary,
     borderRadius: radius.full,
-    paddingVertical: 8,
+    paddingVertical: 12,
     paddingHorizontal: 20,
     alignSelf: 'flex-start',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    minHeight: 40,
   },
   acceptButtonText: {
-    ...typography.bodySmall,
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '600' as const,
   },
 
   // Delete

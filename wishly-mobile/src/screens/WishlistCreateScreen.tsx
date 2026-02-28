@@ -310,8 +310,10 @@ export default function CreateWishlistScreen() {
       } else {
         setStep('create');
       }
-    } else {
+    } else if (navigation.canGoBack()) {
       navigation.goBack();
+    } else {
+      navigation.navigate('Main');
     }
   }, [step, params.addToWishlist, createdWishlistId, navigation]);
 
