@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
+import { GradientView } from '../components/ui/GradientView';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors, spacing, radius, typography, gradients, wishlistThemes } from '../constants/design';
 import { Avatar } from '../components/ui/Avatar';
@@ -208,7 +208,7 @@ export default function FriendProfileScreen() {
       >
         <View style={styles.heroSection}>
           <View style={styles.avatarWrapper}>
-            <LinearGradient
+            <GradientView
               colors={gradients.primary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -221,7 +221,7 @@ export default function FriendProfileScreen() {
                   size={72}
                 />
               </View>
-            </LinearGradient>
+            </GradientView>
             {profile.is_online && <View style={styles.onlineDot} />}
           </View>
 
@@ -243,14 +243,14 @@ export default function FriendProfileScreen() {
             </Pressable>
           ) : (
             <Pressable style={styles.addFriendButton} onPress={handleToggleFriend}>
-              <LinearGradient
+              <GradientView
                 colors={gradients.primary}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.addFriendGradient}
               >
-                <Text style={styles.addFriendText}>{'Добавить в друзья'}</Text>
-              </LinearGradient>
+                <Text style={styles.addFriendText}>{'\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0432 \u0434\u0440\u0443\u0437\u044C\u044F'}</Text>
+              </GradientView>
             </Pressable>
           )}
         </View>
@@ -280,7 +280,7 @@ export default function FriendProfileScreen() {
                   style={styles.wishlistCard}
                   onPress={() => handleOpenWishlist(wishlist.id)}
                 >
-                  <LinearGradient
+                  <GradientView
                     colors={themeGradient}
                     style={styles.wishlistCardGradient}
                   >
@@ -294,7 +294,7 @@ export default function FriendProfileScreen() {
                         <Text style={styles.emojiItem}>{emojis[3]}</Text>
                       </View>
                     </View>
-                  </LinearGradient>
+                  </GradientView>
                   <Text style={styles.wishlistTitle} numberOfLines={1}>
                     {wishlist.title}
                   </Text>

@@ -47,7 +47,10 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
     set({ isLoading: true });
     try {
       const { data } = await api.get(`/wishlists/${id}`);
-      set({ currentWishlist: data, isLoading: false });
+      // Server returns { wishlist: {...}, items: [...] }
+      const wishlist = data.wishlist ?? data;
+      const items = Array.isArray(data.items) ? data.items : [];
+      set({ currentWishlist: wishlist, currentItems: items, isLoading: false });
     } catch (err) {
       const axiosError = err as AxiosError<{ detail?: string }>;
       set({ error: axiosError.response?.data?.detail || 'Ошибка загрузки', isLoading: false });
@@ -55,14 +58,9 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
   },
 
   fetchWishlistItems: async (wishlistId) => {
-    set({ isLoading: true });
-    try {
-      const { data } = await api.get(`/wishlists/${wishlistId}/items`);
-      set({ currentItems: data, isLoading: false });
-    } catch (err) {
-      const axiosError = err as AxiosError<{ detail?: string }>;
-      set({ error: axiosError.response?.data?.detail || 'Ошибка загрузки', isLoading: false });
-    }
+    // Items are already loaded by fetchWishlistById (server embeds them).
+    // This is kept for compatibility but does nothing to avoid a redundant request.
+    set({ isLoading: false });
   },
 
   createWishlist: async (createData) => {
@@ -107,7 +105,13 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
   addItem: async (wishlistId, itemData) => {
     try {
       const { data } = await api.post(`/wishlists/${wishlistId}/items`, itemData);
-      set((state) => ({ currentItems: [...state.currentItems, data] }));
+      set((state) => {
+        // Only append to currentItems if we're viewing this exact wishlist
+        if (state.currentWishlist?.id === wishlistId) {
+          return { currentItems: [...state.currentItems, data] };
+        }
+        return {};
+      });
       return data;
     } catch (err) {
       const axiosError = err as AxiosError<{ detail?: string }>;

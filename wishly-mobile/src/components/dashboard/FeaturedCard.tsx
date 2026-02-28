@@ -1,6 +1,6 @@
 import React, { memo, useCallback } from 'react';
 import { View, Text, Pressable, ImageBackground, StyleSheet } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
+import { GradientView } from '../ui/GradientView';
 import { Badge } from '../ui/Badge';
 import { ProgressBar } from '../ui/ProgressBar';
 import { colors, gradients, spacing, radius, typography } from '../../constants/design';
@@ -50,7 +50,7 @@ export const FeaturedCard = memo(function FeaturedCard({ wishlist, onPress }: Fe
 
   const content = (
     <View style={styles.overlay}>
-      <LinearGradient
+      <GradientView
         colors={gradients.featured}
         style={StyleSheet.absoluteFill}
       />
@@ -88,14 +88,14 @@ export const FeaturedCard = memo(function FeaturedCard({ wishlist, onPress }: Fe
 
   return (
     <Pressable onPress={handlePress} style={styles.container}>
-      <LinearGradient
+      <GradientView
         colors={['#2D1B69', '#1A0533']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.background}
       >
         {content}
-      </LinearGradient>
+      </GradientView>
     </Pressable>
   );
 });

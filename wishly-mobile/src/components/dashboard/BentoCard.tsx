@@ -1,6 +1,6 @@
 import React, { memo, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
+import { GradientView } from '../ui/GradientView';
 import { ProgressBar } from '../ui/ProgressBar';
 import { colors, spacing, radius } from '../../constants/design';
 import { pluralize } from '../../lib/utils';
@@ -53,7 +53,7 @@ export const BentoCard = memo(function BentoCard({ wishlist, onPress }: BentoCar
 
   return (
     <Pressable onPress={handlePress} style={styles.container}>
-      <LinearGradient
+      <GradientView
         colors={gradientColors}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -72,7 +72,7 @@ export const BentoCard = memo(function BentoCard({ wishlist, onPress }: BentoCar
         <View style={styles.progressWrapper}>
           <ProgressBar progress={progress} height={3} />
         </View>
-      </LinearGradient>
+      </GradientView>
     </Pressable>
   );
 });

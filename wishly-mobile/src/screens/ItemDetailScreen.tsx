@@ -14,7 +14,7 @@ import {
   DimensionValue,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
+import { GradientView } from '../components/ui/GradientView';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -277,14 +277,14 @@ export default function ItemDetailScreen() {
               resizeMode="cover"
             />
           ) : (
-            <LinearGradient
+            <GradientView
               colors={[colors.surfaceElevated, colors.surface]}
               style={styles.imagePlaceholder}
             >
               <Text style={styles.placeholderIcon}>{'🎁'}</Text>
-            </LinearGradient>
+            </GradientView>
           )}
-          <LinearGradient
+          <GradientView
             colors={['transparent', colors.background]}
             style={styles.imageGradient}
           />
@@ -414,7 +414,7 @@ export default function ItemDetailScreen() {
 
       {!item.is_reserved && (
         <View style={styles.bottomBar}>
-          <LinearGradient
+          <GradientView
             colors={[`${colors.background}00`, colors.background]}
             style={styles.bottomBarGradient}
           />
